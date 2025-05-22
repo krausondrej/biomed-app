@@ -454,15 +454,43 @@ class MainWindow(QMainWindow):
     def create_discharge_page(self):
         w      = QWidget()
         layout = QVBoxLayout(w)
-        title  = QLabel("Postoperative Data (Hospital Stay)")
+        title  = QLabel("Intrahospital Complications")
         title.setObjectName("titleLabel")
         title.setAlignment(QtCore.Qt.AlignCenter)
         layout.addWidget(title)
-        scroll = QScrollArea(); scroll.setWidgetResizable(True)
-        cont   = QWidget(); vbox = QVBoxLayout(cont); vbox.setSpacing(20)
-        self.add_histogram(vbox, self.discharge_df['LengthOfStay_days'], bins=10,
-                           title='Length of Stay Distribution', xlabel='Days', ylabel='Count')
-        scroll.setWidget(cont); layout.addWidget(scroll)
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        container = QWidget()
+        vbox = QVBoxLayout(container)
+        vbox.setSpacing(20)
+
+        # 1) Occurrence of intrahospital complications
+        occ_counts = self.discharge_df['ComplicationOccurrence']\
+                        .map({0: 'No', 1: 'Yes'})\
+                        .value_counts()
+        self.add_bar_chart(
+            vbox,
+            occ_counts,
+            'Occurrence of Intrahospital Complications',
+            'Occurrence',
+            'Count'
+        )
+
+        # 2) Type of intrahospital complications
+        type_counts = self.discharge_df['ComplicationType']\
+                          .fillna('None')\
+                          .value_counts()
+        self.add_bar_chart(
+            vbox,
+            type_counts,
+            'Type of Intrahospital Complications',
+            'Complication Type',
+            'Count'
+        )
+
+        scroll.setWidget(container)
+        layout.addWidget(scroll)
         return w
 
     def create_followup_page(self):
