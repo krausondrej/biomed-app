@@ -44,8 +44,8 @@ class MainWindow(QMainWindow):
             QMainWindow { background-color: #fff; }
             QLabel#titleLabel { color: #0D1B2A; font-size: 24px; font-weight: bold; padding: 10px; }
             QLabel { color: #0D1B2A; font-size: 18px; }
-            QPushButton { background-color: #415A77; color: #E0E1DD; border: none; border-radius: 5px; padding: 8px; font-size: 16px; }
-            QPushButton:hover { background-color: #1B263B; }
+            QPushButton { background-color: black; color: #E0E1DD; border: none; border-radius: 5px; padding: 8px; font-size: 16px; }
+            QPushButton:hover { background-color: #636564; }
             QScrollArea { border: none; }
         """)
 
@@ -99,6 +99,39 @@ class MainWindow(QMainWindow):
         main_layout.addLayout(top_bar)
         main_layout.addWidget(self.stack)
         self.setCentralWidget(container)
+        
+    def add_collapsible_chart(self, layout, label, draw_func):
+        """
+        Vloží do layoutu tlačítko s popiskem label,
+        pod ním widget (container), do kterého se zavolá draw_func(vlay).
+        Container je na začátku skrytý a tlačítko ho umí přepínat.
+        """
+        btn = QPushButton(f"{label}")
+        btn.setStyleSheet("""
+            QPushButton {
+                background-color: black;
+                color: white;
+                border: none;
+                border-radius: 5px;
+            }
+            QPushButton:hover {
+                background-color: #636564;
+            }
+        """)
+        btn.setCheckable(True)
+        container = QWidget()
+        container.setAttribute(QtCore.Qt.WA_TranslucentBackground)
+        container.setVisible(False)
+        vlay = QVBoxLayout(container)
+        vlay.setContentsMargins(0,0,0,0)
+        vlay.setSpacing(10)
+        # vykreslíme do containeru
+        draw_func(vlay)
+        # napojíme toggle
+        btn.clicked.connect(lambda _, c=container: c.setVisible(not c.isVisible()))
+        # přidáme do hlavního layoutu
+        layout.addWidget(btn)
+        layout.addWidget(container)
 
     def go_back(self):
         if self.history:
@@ -214,8 +247,8 @@ class MainWindow(QMainWindow):
 
     def add_bar_chart(self, layout, data, title, xlabel, ylabel,
                       figsize=(8,5), dpi=100, min_h=600):
-        fig = Figure(figsize=figsize, dpi=dpi)
-        ax  = fig.add_subplot(111)
+        fig = Figure(figsize=figsize, dpi=dpi, facecolor='none')
+        ax  = fig.add_subplot(111, facecolor='none')
         data.plot(kind='bar', ax=ax)
         ax.set_title(title)
         ax.set_xlabel(xlabel)
@@ -247,8 +280,8 @@ class MainWindow(QMainWindow):
 
     def add_histogram(self, layout, data, bins, title, xlabel, ylabel,
                       figsize=(8,5), dpi=100, min_h=600):
-        fig = Figure(figsize=figsize, dpi=dpi)
-        ax  = fig.add_subplot(111)
+        fig = Figure(figsize=figsize, dpi=dpi, facecolor='none')
+        ax  = fig.add_subplot(111, facecolor='none')
         counts, edges, patches = ax.hist(data.dropna(), bins=bins)
         ax.set_title(title)
         ax.set_xlabel(xlabel)
@@ -263,9 +296,9 @@ class MainWindow(QMainWindow):
         ax.set_xticks(edges)
         ax.set_xticklabels([f"{int(e)}" for e in edges], rotation=45)
 
-        # navýšíme limit osy Y o 10 %
+        # navýšíme limit osy Y o 40 %
         max_h = counts.max()
-        ax.set_ylim(0, max_h * 1.1)
+        ax.set_ylim(0, max_h * 1.4)
 
         # popisky nad sloupci
         for rect, cnt in zip(patches, counts):
@@ -298,11 +331,11 @@ class MainWindow(QMainWindow):
         table.setAlternatingRowColors(True)
         table.setStyleSheet("""
             QTableWidget {
-                background-color: #FFFFFF;
-                alternate-background-color: #F0F0F0;
+                background-color: transparent;
+                alternate-background-color: rgba(255,255,255,0.1);
             }
             QHeaderView::section {
-                background-color: #415A77;
+                background-color: black;
                 color: #E0E1DD;
                 padding: 4px;
                 font-weight: bold;
@@ -355,122 +388,156 @@ class MainWindow(QMainWindow):
         container = QWidget()
         self.oper_layout = QVBoxLayout(container)
         self.oper_layout.setSpacing(20)
+        scroll.setStyleSheet("background: transparent;")
+        container.setAttribute(QtCore.Qt.WA_TranslucentBackground)
         scroll.setWidget(container)
         layout.addWidget(scroll)
 
         return w
 
     def update_oper_view(self):
-        ty = self.current_op_type or "All"
-        yr = self.selected_year or "All years"
+        # 1) Aktualizovat header s typem a rokem
+        ty = self.current_op_type or "All types"
+        yr = self.selected_year    or "All years"
         self.oper_header.setText(f"Type: {ty} ┃ Year: {yr}")
-        
-        # vyčistit layout
+
+        # 2) Vyčistit existující widgety
         for i in reversed(range(self.oper_layout.count())):
             w = self.oper_layout.itemAt(i).widget()
             if w:
                 w.setParent(None)
 
-        # základní filtr na rok a typ
+        # 3) Načíst a filtrovat DataFrame podle roku, typu a rozsahu
         df = self.oper_df.copy()
         if self.selected_year and self.selected_year != "2021-2025":
             try:
-                y = int(self.selected_year)
-                df = df[df['OperationDate'] == y]
+                yr_int = int(self.selected_year)
+                df = df[df['OperationDate'] == yr_int]
             except ValueError:
                 pass
         if self.current_op_type:
             df = df[df['OperationType'] == self.current_op_type]
-        else:
-            self.oper_type_label.setText("Type: All")
-
-        # filtr podle rozsahu QDateEdit
-        start, end = self.date_from.date().year(), self.date_to.date().year()
+        start = self.date_from.date().year()
+        end   = self.date_to.date().year()
         df = df[(df['OperationDate'] >= start) & (df['OperationDate'] <= end)]
 
-        # když není nic, zobrazíme zprávu
+        # 4) Pokud není co kreslit, zobrazíme hlášku
         if df.empty:
-            msg = QLabel("No data available for the selected type/year.")
-            msg.setAlignment(QtCore.Qt.AlignCenter)
-            self.oper_layout.addWidget(msg)
+            lbl = QLabel("No data available for the selected type/year.")
+            lbl.setAlignment(QtCore.Qt.AlignCenter)
+            self.oper_layout.addWidget(lbl)
             return
 
-        # *---- speciální vykreslení podle typu ----*
-        # 1) společný graf indikace
-        self.add_bar_chart(
+        # 5) Rozbalitelné grafy
+        # 5a) Indication for Surgery
+        self.add_collapsible_chart(
             self.oper_layout,
-            df['Indication'].value_counts(),
-            'Indication for Surgery', 'Indication', 'Count'
+            'Indication for Surgery',
+            lambda lay: self.add_bar_chart(
+                lay,
+                df['Indication'].value_counts(),
+                'Indication for Surgery', 'Indication', 'Count'
+            )
         )
 
+        # 5b) Grafy specifické pro jednotlivé typy
         if self.current_op_type == 'GHR':
-            # strana hernie
-            self.add_bar_chart(
+            self.add_collapsible_chart(
                 self.oper_layout,
-                df['Side'].fillna('Unknown').value_counts(),
-                'Side of the Hernia', 'Side', 'Count'
+                'Side of the Hernia',
+                lambda lay: self.add_bar_chart(
+                    lay,
+                    df['Side'].fillna('Unknown').value_counts(),
+                    'Side of the Hernia', 'Side', 'Count'
+                )
             )
-            # předchozí opravy (pravá / levá)
-            self.add_bar_chart(
+            self.add_collapsible_chart(
                 self.oper_layout,
-                df['PrevRepairsRight'].fillna(0).astype(int).value_counts().sort_index(),
-                'Previous Repairs (Right)', 'Number of Repairs', 'Count'
+                'Previous Repairs (Right)',
+                lambda lay: self.add_bar_chart(
+                    lay,
+                    df['PrevRepairsRight'].fillna(0).astype(int).value_counts().sort_index(),
+                    'Previous Repairs (Right)', 'Number of Repairs', 'Count'
+                )
             )
-            self.add_bar_chart(
+            self.add_collapsible_chart(
                 self.oper_layout,
-                df['PrevRepairsLeft'].fillna(0).astype(int).value_counts().sort_index(),
-                'Previous Repairs (Left)', 'Number of Repairs', 'Count'
+                'Previous Repairs (Left)',
+                lambda lay: self.add_bar_chart(
+                    lay,
+                    df['PrevRepairsLeft'].fillna(0).astype(int).value_counts().sort_index(),
+                    'Previous Repairs (Left)', 'Number of Repairs', 'Count'
+                )
             )
-            # typ tříselné hernie (pravá / levá)
-            self.add_bar_chart(
+            self.add_collapsible_chart(
                 self.oper_layout,
-                df['HerniaTypeRight'].fillna('Unknown').value_counts(),
-                'Groin Hernia Type (Right)', 'Hernia Type', 'Count'
+                'Groin Hernia Type (Right)',
+                lambda lay: self.add_bar_chart(
+                    lay,
+                    df['HerniaTypeRight'].fillna('Unknown').value_counts(),
+                    'Groin Hernia Type (Right)', 'Hernia Type', 'Count'
+                )
             )
-            self.add_bar_chart(
+            self.add_collapsible_chart(
                 self.oper_layout,
-                df['HerniaTypeLeft'].fillna('Unknown').value_counts(),
-                'Groin Hernia Type (Left)', 'Hernia Type', 'Count'
+                'Groin Hernia Type (Left)',
+                lambda lay: self.add_bar_chart(
+                    lay,
+                    df['HerniaTypeLeft'].fillna('Unknown').value_counts(),
+                    'Groin Hernia Type (Left)', 'Hernia Type', 'Count'
+                )
             )
 
         elif self.current_op_type == 'PHR':
-            # typ stomie
-            self.add_bar_chart(
+            self.add_collapsible_chart(
                 self.oper_layout,
-                df['StomaType'].fillna('Unknown').value_counts(),
-                'Type of Stoma', 'Stoma Type', 'Count'
+                'Type of Stoma',
+                lambda lay: self.add_bar_chart(
+                    lay,
+                    df['StomaType'].fillna('Unknown').value_counts(),
+                    'Type of Stoma', 'Stoma Type', 'Count'
+                )
             )
-            # celkový počet předchozích oprav
-            total = (df['PrevRepairsRight'].fillna(0) + df['PrevRepairsLeft'].fillna(0)).astype(int)
-            self.add_bar_chart(
+            total_repairs = (df['PrevRepairsRight'].fillna(0) + df['PrevRepairsLeft'].fillna(0)).astype(int)
+            self.add_collapsible_chart(
                 self.oper_layout,
-                total.value_counts().sort_index(),
-                'Number of Previous Repairs', 'Number of Repairs', 'Count'
+                'Number of Previous Repairs',
+                lambda lay: self.add_bar_chart(
+                    lay,
+                    total_repairs.value_counts().sort_index(),
+                    'Number of Previous Repairs', 'Number of Repairs', 'Count'
+                )
             )
 
         elif self.current_op_type == 'PVHR':
-            # specifikace typu PVHR
-            self.add_bar_chart(
+            self.add_collapsible_chart(
                 self.oper_layout,
-                df['PVHR_Type'].fillna('Unknown').value_counts(),
-                'PVHR Type Specification', 'PVHR Type', 'Count'
+                'PVHR Type Specification',
+                lambda lay: self.add_bar_chart(
+                    lay,
+                    df['PVHR_Type'].fillna('Unknown').value_counts(),
+                    'PVHR Type Specification', 'PVHR Type', 'Count'
+                )
             )
 
         elif self.current_op_type == 'IVHR':
-            # počet předchozích oprav (incisional ventral)
-            total = (df['PrevRepairsRight'].fillna(0) + df['PrevRepairsLeft'].fillna(0)).astype(int)
-            self.add_bar_chart(
+            total_repairs = (df['PrevRepairsRight'].fillna(0) + df['PrevRepairsLeft'].fillna(0)).astype(int)
+            self.add_collapsible_chart(
                 self.oper_layout,
-                total.value_counts().sort_index(),
-                'Number of Previous Hernia Repairs', 'Number of Repairs', 'Count'
+                'Number of Previous Hernia Repairs',
+                lambda lay: self.add_bar_chart(
+                    lay,
+                    total_repairs.value_counts().sort_index(),
+                    'Number of Previous Hernia Repairs', 'Number of Repairs', 'Count'
+                )
             )
 
-        # --- volitelně: tabulka souhrnných statistik ---
+        # 6) Přehledová tabulka se základními statistikami
         stats = {
             'Total ops':            len(df),
-            'Avg duration (h)':      f"{df['OperationDuration_h'].mean():.2f}",
-            'Min duration (h)':      f"{df['OperationDuration_h'].min():.2f}",
-            'Max duration (h)':      f"{df['OperationDuration_h'].max():.2f}"
+            'Avg duration (h)':     f"{df['OperationDuration_h'].mean():.2f}",
+            'Min duration (h)':     f"{df['OperationDuration_h'].min():.2f}",
+            'Max duration (h)':     f"{df['OperationDuration_h'].max():.2f}"
         }
         self.add_stats_table(self.oper_layout, stats)
 
@@ -494,16 +561,19 @@ class MainWindow(QMainWindow):
         container = QWidget()
         self.preop_layout = QVBoxLayout(container)
         self.preop_layout.setSpacing(20)
+        scroll.setStyleSheet("background: transparent;")
+        container.setAttribute(QtCore.Qt.WA_TranslucentBackground)
         scroll.setWidget(container)
         layout.addWidget(scroll)
 
         return w
 
     def update_preop_view(self):
-        ty = self.current_op_type or "All"
+        # Aktualizace headeru s vybraným typem a rokem
+        ty = self.current_op_type or "All types"
         yr = self.selected_year or "All years"
         self.preop_header.setText(f"Type: {ty} ┃ Year: {yr}")
-        
+
         # 1) Vyčistit stávající widgety
         for i in reversed(range(self.preop_layout.count())):
             w = self.preop_layout.itemAt(i).widget()
@@ -514,63 +584,87 @@ class MainWindow(QMainWindow):
         df = self.preop_df.copy()
         if self.selected_year and self.selected_year != "2021-2025":
             try:
-                yr = int(self.selected_year)
-                df = df[df['Year'] == yr]
+                yr_int = int(self.selected_year)
+                df = df[df['Year'] == yr_int]
             except ValueError:
                 pass
 
-        # 3) Pokud je df prázdné
+        # 3) Pokud je df prázdné, zobrazíme informaci
         if df.empty:
             lbl = QLabel("No data for selected year.")
             lbl.setAlignment(QtCore.Qt.AlignCenter)
             self.preop_layout.addWidget(lbl)
             return
 
-        # 4) Vykreslit grafy
-        # Number of Men and Women
-        self.add_bar_chart(
+        # 4) Přidání rozbalitelných grafů
+        self.add_collapsible_chart(
             self.preop_layout,
-            df['Gender'].value_counts(),
-            'Number of Men and Women', 'Gender', 'Count'
+            'Number of Men and Women',
+            lambda lay: self.add_bar_chart(
+                lay,
+                df['Gender'].value_counts(),
+                'Number of Men and Women', 'Gender', 'Count'
+            )
         )
-        # Age distribution
-        self.add_histogram(
+        self.add_collapsible_chart(
             self.preop_layout,
-            df['Age'], bins=10,
-            title='Age Distribution', xlabel='Age', ylabel='Count'
+            'Age Distribution',
+            lambda lay: self.add_histogram(
+                lay,
+                df['Age'], bins=10,
+                title='Age Distribution', xlabel='Age', ylabel='Count'
+            )
         )
-        # BMI distribution
-        self.add_histogram(
+        self.add_collapsible_chart(
             self.preop_layout,
-            df['BMI'], bins=10,
-            title='BMI Distribution', xlabel='BMI', ylabel='Count'
+            'BMI Distribution',
+            lambda lay: self.add_histogram(
+                lay,
+                df['BMI'], bins=10,
+                title='BMI Distribution', xlabel='BMI', ylabel='Count'
+            )
         )
-        # Comorbidities
-        com = ['Diabetes','Hypertension','Heart_Disease']
-        self.add_bar_chart(
+        self.add_collapsible_chart(
             self.preop_layout,
-            df[com].sum(),
-            'Prevalence of Comorbidities', 'Comorbidity', 'Number of Patients'
+            'Comorbidities Before Surgery',
+            lambda lay: self.add_bar_chart(
+                lay,
+                df[['Diabetes','Hypertension','Heart_Disease']].sum(),
+                'Prevalence of Comorbidities', 'Comorbidity', 'Number of Patients'
+            )
         )
-        # Pain
-        self.add_histogram(
+        self.add_collapsible_chart(
             self.preop_layout,
-            df['Preop_Pain_Score'], bins=10,
-            title='Pre-operative Pain Score', xlabel='Pain Score', ylabel='Count'
+            'Pre-operative Pain Score',
+            lambda lay: self.add_histogram(
+                lay,
+                df['Preop_Pain_Score'], bins=10,
+                title='Pre-operative Pain Score Distribution',
+                xlabel='Pain Score', ylabel='Count'
+            )
         )
-        # Restrictions
-        self.add_histogram(
+        self.add_collapsible_chart(
             self.preop_layout,
-            df['Preop_Restrictions_Score'], bins=10,
-            title='Pre-operative Restrictions', xlabel='Restrictions Score', ylabel='Count'
+            'Pre-operative Restrictions Score',
+            lambda lay: self.add_histogram(
+                lay,
+                df['Preop_Restrictions_Score'], bins=10,
+                title='Pre-operative Restrictions Score Distribution',
+                xlabel='Restrictions Score', ylabel='Count'
+            )
         )
-        # Aesthetic discomfort
-        self.add_histogram(
+        self.add_collapsible_chart(
             self.preop_layout,
-            df['Aesthetic_Discomfort_Score'], bins=10,
-            title='Aesthetic Discomfort Score', xlabel='Discomfort Score', ylabel='Count'
+            'Aesthetic Discomfort Score',
+            lambda lay: self.add_histogram(
+                lay,
+                df['Aesthetic_Discomfort_Score'], bins=10,
+                title='Aesthetic Discomfort Score Distribution',
+                xlabel='Discomfort Score', ylabel='Count'
+            )
         )
-        
+
+        # 5) Přehledová tabulka se základními statistikami
         stats = {
             'Total patients': len(df),
             'Males': df['Gender'].value_counts().get('Male', 0),
@@ -599,60 +693,71 @@ class MainWindow(QMainWindow):
         container = QWidget()
         self.discharge_layout = QVBoxLayout(container)
         self.discharge_layout.setSpacing(20)
+        scroll.setStyleSheet("background: transparent;")
+        container.setAttribute(QtCore.Qt.WA_TranslucentBackground)
         scroll.setWidget(container)
         layout.addWidget(scroll)
 
         return w
 
     def update_discharge_view(self):
-        ty = self.current_op_type or "All"
-        yr = self.selected_year or "All years"
+        # 1) Aktualizovat header s typem a rokem
+        ty = self.current_op_type or "All types"
+        yr = self.selected_year    or "All years"
         self.discharge_header.setText(f"Type: {ty} ┃ Year: {yr}")
-        
-        # vyčistit
+
+        # 2) Vyčistit existující widgety
         for i in reversed(range(self.discharge_layout.count())):
             w = self.discharge_layout.itemAt(i).widget()
             if w:
                 w.setParent(None)
 
-        # zkopírovat a filtrovat podle roku
+        # 3) Zkopírovat a filtrovat DataFrame podle roku
         df = self.discharge_df.copy()
         if self.selected_year and self.selected_year != "2021-2025":
             try:
-                yr = int(self.selected_year)
-                df = df[df['Year'] == yr]
+                yr_int = int(self.selected_year)
+                df = df[df['Year'] == yr_int]
             except ValueError:
                 pass
 
-        # prázdné?
+        # 4) Pokud po filtraci není žádný řádek, zobrazíme zprávu
         if df.empty:
             lbl = QLabel("No discharge data for selected year.")
             lbl.setAlignment(QtCore.Qt.AlignCenter)
             self.discharge_layout.addWidget(lbl)
             return
 
-        # 1) Occurrence
-        occ_counts = df['ComplicationOccurrence']\
-                        .map({0:'No',1:'Yes'})\
+        # 5) Vypočítat data pro grafy
+        occ_counts = df['ComplicationOccurrence'] \
+                        .map({0: 'No', 1: 'Yes'}) \
                         .value_counts()
-        self.add_bar_chart(
-            self.discharge_layout,
-            occ_counts,
-            'Occurrence of Intrahospital Complications',
-            'Occurrence',
-            'Count'
-        )
-
-        # 2) Type
-        type_counts = df['ComplicationType']\
-                          .fillna('None')\
+        type_counts = df['ComplicationType'] \
+                          .fillna('None') \
                           .value_counts()
-        self.add_bar_chart(
+
+        # 6) Přidat rozbalitelné grafy
+        self.add_collapsible_chart(
             self.discharge_layout,
-            type_counts,
+            'Occurrence of Intrahospital Complications',
+            lambda lay: self.add_bar_chart(
+                lay,
+                occ_counts,
+                'Occurrence of Intrahospital Complications',
+                'Occurrence',
+                'Count'
+            )
+        )
+        self.add_collapsible_chart(
+            self.discharge_layout,
             'Type of Intrahospital Complications',
-            'Complication Type',
-            'Count'
+            lambda lay: self.add_bar_chart(
+                lay,
+                type_counts,
+                'Type of Intrahospital Complications',
+                'Complication Type',
+                'Count'
+            )
         )
 
     def create_followup_page(self):
@@ -672,56 +777,71 @@ class MainWindow(QMainWindow):
         container = QWidget()
         self.followup_layout = QVBoxLayout(container)
         self.followup_layout.setSpacing(20)
+        scroll.setStyleSheet("background: transparent;")
+        container.setAttribute(QtCore.Qt.WA_TranslucentBackground)
         scroll.setWidget(container)
         layout.addWidget(scroll)
 
         return w
 
     def update_followup_view(self):
-        ty = self.current_op_type or "All"
-        yr = self.selected_year or "All years"
+        # 1) Aktualizovat header s typem a rokem
+        ty = self.current_op_type or "All types"
+        yr = self.selected_year    or "All years"
         self.followup_header.setText(f"Type: {ty} ┃ Year: {yr}")
-        
-        # vyčistit
+
+        # 2) Vyčistit existující widgety
         for i in reversed(range(self.followup_layout.count())):
             w = self.followup_layout.itemAt(i).widget()
             if w:
                 w.setParent(None)
 
-        # zkopírovat a filtrovat podle roku
+        # 3) Zkopírovat a filtrovat DataFrame podle roku
         df = self.followup_df.copy()
         if self.selected_year and self.selected_year != "2021-2025":
             try:
-                yr = int(self.selected_year)
-                df = df[df['Year'] == yr]
+                yr_int = int(self.selected_year)
+                df = df[df['Year'] == yr_int]
             except ValueError:
                 pass
 
-        # prázdné?
+        # 4) Pokud po filtraci není žádný řádek, zobrazíme zprávu
         if df.empty:
             lbl = QLabel("No follow-up data for selected year.")
             lbl.setAlignment(QtCore.Qt.AlignCenter)
             self.followup_layout.addWidget(lbl)
             return
 
-        # 1) Occurrence
-        occ = df['FollowUpOccurrence'].map({0:'No',1:'Yes'}).value_counts()
-        self.add_bar_chart(
-            self.followup_layout,
-            occ,
-            'Occurrence of Follow-Up Complications',
-            'Occurrence',
-            'Count'
-        )
+        # 5) Připravit data pro grafy
+        occ = df['FollowUpOccurrence'] \
+                  .map({0: 'No', 1: 'Yes'}) \
+                  .value_counts()
+        types = df['FollowUpType'] \
+                   .fillna('None') \
+                   .value_counts()
 
-        # 2) Type
-        types = df['FollowUpType'].fillna('None').value_counts()
-        self.add_bar_chart(
+        # 6) Přidat rozbalitelné grafy
+        self.add_collapsible_chart(
             self.followup_layout,
-            types,
+            'Occurrence of Follow-Up Complications',
+            lambda lay: self.add_bar_chart(
+                lay,
+                occ,
+                'Occurrence of Follow-Up Complications',
+                'Occurrence',
+                'Count'
+            )
+        )
+        self.add_collapsible_chart(
+            self.followup_layout,
             'Type of Follow-Up Complications',
-            'Complication Type',
-            'Count'
+            lambda lay: self.add_bar_chart(
+                lay,
+                types,
+                'Type of Follow-Up Complications',
+                'Complication Type',
+                'Count'
+            )
         )
 
 if __name__ == "__main__":
