@@ -211,24 +211,49 @@ class MainWindow(QMainWindow):
             
     # ===== Helper pro grafy =====
 
-    def add_bar_chart(self, layout, data, title, xlabel, ylabel, figsize=(8,5), dpi=100, min_h=400):
+    def add_bar_chart(self, layout, data, title, xlabel, ylabel,
+                      figsize=(8,5), dpi=100, min_h=400):
         fig = Figure(figsize=figsize, dpi=dpi)
         ax  = fig.add_subplot(111)
+        # vykreslit sloupcový graf
         data.plot(kind='bar', ax=ax)
         ax.set_title(title)
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
+        # zvýraznit svislou osu
+        ax.spines['left'].set_linewidth(1.2)
+        ax.spines['left'].set_color('#0D1B2A')
+        ax.yaxis.set_ticks_position('left')
+        # přidat text nad sloupce
+        for rect in ax.patches:
+            h = int(rect.get_height())
+            ax.text(rect.get_x() + rect.get_width()/2, h,
+                    f"{h}", ha='center', va='bottom')
         canvas = FigureCanvas(fig)
         canvas.setMinimumHeight(min_h)
         layout.addWidget(canvas)
 
-    def add_histogram(self, layout, data, bins, title, xlabel, ylabel, figsize=(8,5), dpi=100, min_h=400):
+    def add_histogram(self, layout, data, bins, title, xlabel, ylabel,
+                      figsize=(8,5), dpi=100, min_h=400):
         fig = Figure(figsize=figsize, dpi=dpi)
         ax  = fig.add_subplot(111)
-        ax.hist(data.dropna(), bins=bins)
+        # vypočítat histogram
+        counts, edges, patches = ax.hist(data.dropna(), bins=bins)
         ax.set_title(title)
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
+        # zvýraznit svislou osu
+        ax.spines['left'].set_linewidth(1.2)
+        ax.spines['left'].set_color('#0D1B2A')
+        ax.yaxis.set_ticks_position('left')
+        # xticky na hranice intervalů
+        ax.set_xticks(edges)
+        ax.set_xticklabels([f"{int(e)}" for e in edges], rotation=45)
+        # přidat text nad sloupce
+        for rect, cnt in zip(patches, counts):
+            h = int(cnt)
+            ax.text(rect.get_x() + rect.get_width()/2, h,
+                    f"{h}", ha='center', va='bottom')
         canvas = FigureCanvas(fig)
         canvas.setMinimumHeight(min_h)
         layout.addWidget(canvas)
@@ -471,6 +496,22 @@ class MainWindow(QMainWindow):
             df['Aesthetic_Discomfort_Score'], bins=10,
             title='Aesthetic Discomfort Score', xlabel='Discomfort Score', ylabel='Count'
         )
+        
+        stats = {
+            'Total patients': len(df),
+            'Males': df['Gender'].value_counts().get('Male', 0),
+            'Females': df['Gender'].value_counts().get('Female', 0),
+            'Mean age': f"{df['Age'].mean():.1f}",
+            'Median age': f"{df['Age'].median():.1f}",
+            'Mean BMI': f"{df['BMI'].mean():.1f}"
+        }
+        table = QTableWidget(len(stats), 2)
+        table.setHorizontalHeaderLabels(['Metric','Value'])
+        for row, (k, v) in enumerate(stats.items()):
+            table.setItem(row, 0, QTableWidgetItem(k))
+            table.setItem(row, 1, QTableWidgetItem(str(v)))
+        table.resizeColumnsToContents()
+        self.preop_layout.addWidget(table)
 
 
     def create_discharge_page(self):
