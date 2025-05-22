@@ -342,18 +342,69 @@ class MainWindow(QMainWindow):
         title.setObjectName("titleLabel")
         title.setAlignment(QtCore.Qt.AlignCenter)
         layout.addWidget(title)
-        scroll = QScrollArea(); scroll.setWidgetResizable(True)
-        cont   = QWidget(); vbox = QVBoxLayout(cont); vbox.setSpacing(20)
-        self.add_bar_chart(vbox, self.preop_df['Gender'].value_counts(),
-                           'Number of Males and Females', 'Gender', 'Count')
-        self.add_histogram(vbox, self.preop_df['Age'], bins=10,
-                           title='Age Distribution', xlabel='Age', ylabel='Count')
-        self.add_histogram(vbox, self.preop_df['BMI'], bins=10,
-                           title='BMI Distribution', xlabel='BMI', ylabel='Count')
-        com = ['Diabetes','Hypertension','Heart_Disease']
-        self.add_bar_chart(vbox, self.preop_df[com].sum(),
-                           'Prevalence of Comorbidities', 'Comorbidity', 'Number of Patients')
-        scroll.setWidget(cont); layout.addWidget(scroll)
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        container = QWidget()
+        vbox = QVBoxLayout(container)
+        vbox.setSpacing(20)
+
+        # 1) Number of Men and Women
+        self.add_bar_chart(
+            vbox,
+            self.preop_df['Gender'].value_counts(),
+            'Number of Men and Women', 'Gender', 'Count'
+        )
+
+        # 2) Age distribution
+        self.add_histogram(
+            vbox,
+            self.preop_df['Age'], bins=10,
+            title='Age Distribution', xlabel='Age', ylabel='Count'
+        )
+
+        # 3) BMI distribution
+        self.add_histogram(
+            vbox,
+            self.preop_df['BMI'], bins=10,
+            title='BMI Distribution', xlabel='BMI', ylabel='Count'
+        )
+
+        # 4) Comorbidities before surgery
+        com = ['Diabetes', 'Hypertension', 'Heart_Disease']
+        counts = self.preop_df[com].sum()
+        self.add_bar_chart(
+            vbox,
+            counts,
+            'Prevalence of Comorbidities', 'Comorbidity', 'Number of Patients'
+        )
+
+        # 5) Pre-operative pain at site of hernia
+        self.add_histogram(
+            vbox,
+            self.preop_df['Preop_Pain_Score'], bins=10,
+            title='Pre-operative Pain Score Distribution',
+            xlabel='Pain Score', ylabel='Count'
+        )
+
+        # 6) Pre-operative restrictions
+        self.add_histogram(
+            vbox,
+            self.preop_df['Preop_Restrictions_Score'], bins=10,
+            title='Pre-operative Restrictions Score Distribution',
+            xlabel='Restrictions Score', ylabel='Count'
+        )
+
+        # 7) Pre-operative aesthetical discomfort
+        self.add_histogram(
+            vbox,
+            self.preop_df['Aesthetic_Discomfort_Score'], bins=10,
+            title='Aesthetic Discomfort Score Distribution',
+            xlabel='Discomfort Score', ylabel='Count'
+        )
+
+        scroll.setWidget(container)
+        layout.addWidget(scroll)
         return w
 
     def create_discharge_page(self):
