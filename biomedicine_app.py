@@ -201,8 +201,14 @@ class MainWindow(QMainWindow):
         if target:
             if target is self.page_oper:
                 self.update_oper_view()
+            if target is self.page_preop:
+                self.update_preop_view()
+            if target is self.page_discharge:
+                self.update_discharge_view()
+            if target is self.page_followup:
+                self.update_followup_view()
             self.navigate(self.page_data, target)
-
+            
     # ===== Helper pro grafy =====
 
     def add_bar_chart(self, layout, data, title, xlabel, ylabel, figsize=(8,5), dpi=100, min_h=400):
@@ -387,69 +393,85 @@ class MainWindow(QMainWindow):
         title.setAlignment(QtCore.Qt.AlignCenter)
         layout.addWidget(title)
 
+        # Scroll area a kontejner, do kterého budeme vkládat grafy
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         container = QWidget()
-        vbox = QVBoxLayout(container)
-        vbox.setSpacing(20)
-
-        # 1) Number of Men and Women
-        self.add_bar_chart(
-            vbox,
-            self.preop_df['Gender'].value_counts(),
-            'Number of Men and Women', 'Gender', 'Count'
-        )
-
-        # 2) Age distribution
-        self.add_histogram(
-            vbox,
-            self.preop_df['Age'], bins=10,
-            title='Age Distribution', xlabel='Age', ylabel='Count'
-        )
-
-        # 3) BMI distribution
-        self.add_histogram(
-            vbox,
-            self.preop_df['BMI'], bins=10,
-            title='BMI Distribution', xlabel='BMI', ylabel='Count'
-        )
-
-        # 4) Comorbidities before surgery
-        com = ['Diabetes', 'Hypertension', 'Heart_Disease']
-        counts = self.preop_df[com].sum()
-        self.add_bar_chart(
-            vbox,
-            counts,
-            'Prevalence of Comorbidities', 'Comorbidity', 'Number of Patients'
-        )
-
-        # 5) Pre-operative pain at site of hernia
-        self.add_histogram(
-            vbox,
-            self.preop_df['Preop_Pain_Score'], bins=10,
-            title='Pre-operative Pain Score Distribution',
-            xlabel='Pain Score', ylabel='Count'
-        )
-
-        # 6) Pre-operative restrictions
-        self.add_histogram(
-            vbox,
-            self.preop_df['Preop_Restrictions_Score'], bins=10,
-            title='Pre-operative Restrictions Score Distribution',
-            xlabel='Restrictions Score', ylabel='Count'
-        )
-
-        # 7) Pre-operative aesthetical discomfort
-        self.add_histogram(
-            vbox,
-            self.preop_df['Aesthetic_Discomfort_Score'], bins=10,
-            title='Aesthetic Discomfort Score Distribution',
-            xlabel='Discomfort Score', ylabel='Count'
-        )
-
+        self.preop_layout = QVBoxLayout(container)
+        self.preop_layout.setSpacing(20)
         scroll.setWidget(container)
         layout.addWidget(scroll)
+
         return w
+
+    def update_preop_view(self):
+        # 1) Vyčistit stávající widgety
+        for i in reversed(range(self.preop_layout.count())):
+            w = self.preop_layout.itemAt(i).widget()
+            if w:
+                w.setParent(None)
+
+        # 2) Filtr na rok
+        df = self.preop_df.copy()
+        if self.selected_year and self.selected_year != "2021-2025":
+            try:
+                yr = int(self.selected_year)
+                df = df[df['Year'] == yr]
+            except ValueError:
+                pass
+
+        # 3) Pokud je df prázdné
+        if df.empty:
+            lbl = QLabel("No data for selected year.")
+            lbl.setAlignment(QtCore.Qt.AlignCenter)
+            self.preop_layout.addWidget(lbl)
+            return
+
+        # 4) Vykreslit grafy
+        # Number of Men and Women
+        self.add_bar_chart(
+            self.preop_layout,
+            df['Gender'].value_counts(),
+            'Number of Men and Women', 'Gender', 'Count'
+        )
+        # Age distribution
+        self.add_histogram(
+            self.preop_layout,
+            df['Age'], bins=10,
+            title='Age Distribution', xlabel='Age', ylabel='Count'
+        )
+        # BMI distribution
+        self.add_histogram(
+            self.preop_layout,
+            df['BMI'], bins=10,
+            title='BMI Distribution', xlabel='BMI', ylabel='Count'
+        )
+        # Comorbidities
+        com = ['Diabetes','Hypertension','Heart_Disease']
+        self.add_bar_chart(
+            self.preop_layout,
+            df[com].sum(),
+            'Prevalence of Comorbidities', 'Comorbidity', 'Number of Patients'
+        )
+        # Pain
+        self.add_histogram(
+            self.preop_layout,
+            df['Preop_Pain_Score'], bins=10,
+            title='Pre-operative Pain Score', xlabel='Pain Score', ylabel='Count'
+        )
+        # Restrictions
+        self.add_histogram(
+            self.preop_layout,
+            df['Preop_Restrictions_Score'], bins=10,
+            title='Pre-operative Restrictions', xlabel='Restrictions Score', ylabel='Count'
+        )
+        # Aesthetic discomfort
+        self.add_histogram(
+            self.preop_layout,
+            df['Aesthetic_Discomfort_Score'], bins=10,
+            title='Aesthetic Discomfort Score', xlabel='Discomfort Score', ylabel='Count'
+        )
+
 
     def create_discharge_page(self):
         w      = QWidget()
@@ -462,36 +484,59 @@ class MainWindow(QMainWindow):
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         container = QWidget()
-        vbox = QVBoxLayout(container)
-        vbox.setSpacing(20)
+        self.discharge_layout = QVBoxLayout(container)
+        self.discharge_layout.setSpacing(20)
+        scroll.setWidget(container)
+        layout.addWidget(scroll)
 
-        # 1) Occurrence of intrahospital complications
-        occ_counts = self.discharge_df['ComplicationOccurrence']\
-                        .map({0: 'No', 1: 'Yes'})\
+        return w
+
+    def update_discharge_view(self):
+        # vyčistit
+        for i in reversed(range(self.discharge_layout.count())):
+            w = self.discharge_layout.itemAt(i).widget()
+            if w:
+                w.setParent(None)
+
+        # zkopírovat a filtrovat podle roku
+        df = self.discharge_df.copy()
+        if self.selected_year and self.selected_year != "2021-2025":
+            try:
+                yr = int(self.selected_year)
+                df = df[df['Year'] == yr]
+            except ValueError:
+                pass
+
+        # prázdné?
+        if df.empty:
+            lbl = QLabel("No discharge data for selected year.")
+            lbl.setAlignment(QtCore.Qt.AlignCenter)
+            self.discharge_layout.addWidget(lbl)
+            return
+
+        # 1) Occurrence
+        occ_counts = df['ComplicationOccurrence']\
+                        .map({0:'No',1:'Yes'})\
                         .value_counts()
         self.add_bar_chart(
-            vbox,
+            self.discharge_layout,
             occ_counts,
             'Occurrence of Intrahospital Complications',
             'Occurrence',
             'Count'
         )
 
-        # 2) Type of intrahospital complications
-        type_counts = self.discharge_df['ComplicationType']\
+        # 2) Type
+        type_counts = df['ComplicationType']\
                           .fillna('None')\
                           .value_counts()
         self.add_bar_chart(
-            vbox,
+            self.discharge_layout,
             type_counts,
             'Type of Intrahospital Complications',
             'Complication Type',
             'Count'
         )
-
-        scroll.setWidget(container)
-        layout.addWidget(scroll)
-        return w
 
     def create_followup_page(self):
         w      = QWidget()
@@ -504,36 +549,55 @@ class MainWindow(QMainWindow):
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         container = QWidget()
-        vbox = QVBoxLayout(container)
-        vbox.setSpacing(20)
+        self.followup_layout = QVBoxLayout(container)
+        self.followup_layout.setSpacing(20)
+        scroll.setWidget(container)
+        layout.addWidget(scroll)
 
-        # 1) Occurrence of complications (sl. NB, obr. 2.126)
-        occ_counts = self.followup_df['FollowUpOccurrence'] \
-                         .map({0: 'No', 1: 'Yes'}) \
-                         .value_counts()
+        return w
+
+    def update_followup_view(self):
+        # vyčistit
+        for i in reversed(range(self.followup_layout.count())):
+            w = self.followup_layout.itemAt(i).widget()
+            if w:
+                w.setParent(None)
+
+        # zkopírovat a filtrovat podle roku
+        df = self.followup_df.copy()
+        if self.selected_year and self.selected_year != "2021-2025":
+            try:
+                yr = int(self.selected_year)
+                df = df[df['Year'] == yr]
+            except ValueError:
+                pass
+
+        # prázdné?
+        if df.empty:
+            lbl = QLabel("No follow-up data for selected year.")
+            lbl.setAlignment(QtCore.Qt.AlignCenter)
+            self.followup_layout.addWidget(lbl)
+            return
+
+        # 1) Occurrence
+        occ = df['FollowUpOccurrence'].map({0:'No',1:'Yes'}).value_counts()
         self.add_bar_chart(
-            vbox,
-            occ_counts,
+            self.followup_layout,
+            occ,
             'Occurrence of Follow-Up Complications',
             'Occurrence',
             'Count'
         )
 
-        # 2) Type of complications (sl. NC-NH, obr. 2.127)
-        type_counts = self.followup_df['FollowUpType'] \
-                          .fillna('None') \
-                          .value_counts()
+        # 2) Type
+        types = df['FollowUpType'].fillna('None').value_counts()
         self.add_bar_chart(
-            vbox,
-            type_counts,
+            self.followup_layout,
+            types,
             'Type of Follow-Up Complications',
             'Complication Type',
             'Count'
         )
-
-        scroll.setWidget(container)
-        layout.addWidget(scroll)
-        return w
 
 if __name__ == "__main__":
     app    = QApplication(sys.argv)
