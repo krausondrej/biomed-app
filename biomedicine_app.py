@@ -267,69 +267,113 @@ class MainWindow(QMainWindow):
             if w:
                 w.setParent(None)
 
+        # základní filtr na rok a typ
         df = self.oper_df.copy()
-
-        # filtr podle roku
         if self.selected_year and self.selected_year != "2021-2025":
             try:
                 y = int(self.selected_year)
                 df = df[df['OperationDate'] == y]
             except ValueError:
                 pass
-
-        # filtr podle typu
         if self.current_op_type:
             df = df[df['OperationType'] == self.current_op_type]
             self.oper_type_label.setText(f"Type: {self.current_op_type}")
         else:
             self.oper_type_label.setText("Type: All")
 
-        # filtr podle rozsahu z QDateEdit
-        start = self.date_from.date().year()
-        end   = self.date_to.date().year()
+        # filtr podle rozsahu QDateEdit
+        start, end = self.date_from.date().year(), self.date_to.date().year()
         df = df[(df['OperationDate'] >= start) & (df['OperationDate'] <= end)]
 
-        # pokud po filtrech není nic, zobrazíme hlášku
+        # když není nic, zobrazíme zprávu
         if df.empty:
             msg = QLabel("No data available for the selected type/year.")
             msg.setAlignment(QtCore.Qt.AlignCenter)
             self.oper_layout.addWidget(msg)
             return
 
-        # vykreslení grafů a tabulky
+        # *---- speciální vykreslení podle typu ----*
+        # 1) společný graf indikace
         self.add_bar_chart(
             self.oper_layout,
             df['Indication'].value_counts(),
-            'Indication Counts', 'Indication', 'Count'
-        )
-        self.add_bar_chart(
-            self.oper_layout,
-            df['Side'].fillna('Unknown').value_counts(),
-            'Side Distribution', 'Side', 'Count'
-        )
-        self.add_bar_chart(
-            self.oper_layout,
-            df['OperationType'].value_counts(),
-            'Operation Type Distribution', 'Operation Type', 'Count'
-        )
-        self.add_histogram(
-            self.oper_layout,
-            df['OperationDuration_h'], bins=10,
-            title='Operation Duration Distribution',
-            xlabel='Duration (h)', ylabel='Count'
+            'Indication for Surgery', 'Indication', 'Count'
         )
 
+        if self.current_op_type == 'GHR':
+            # strana hernie
+            self.add_bar_chart(
+                self.oper_layout,
+                df['Side'].fillna('Unknown').value_counts(),
+                'Side of the Hernia', 'Side', 'Count'
+            )
+            # předchozí opravy (pravá / levá)
+            self.add_bar_chart(
+                self.oper_layout,
+                df['PrevRepairsRight'].fillna(0).astype(int).value_counts().sort_index(),
+                'Previous Repairs (Right)', 'Number of Repairs', 'Count'
+            )
+            self.add_bar_chart(
+                self.oper_layout,
+                df['PrevRepairsLeft'].fillna(0).astype(int).value_counts().sort_index(),
+                'Previous Repairs (Left)', 'Number of Repairs', 'Count'
+            )
+            # typ tříselné hernie (pravá / levá)
+            self.add_bar_chart(
+                self.oper_layout,
+                df['HerniaTypeRight'].fillna('Unknown').value_counts(),
+                'Groin Hernia Type (Right)', 'Hernia Type', 'Count'
+            )
+            self.add_bar_chart(
+                self.oper_layout,
+                df['HerniaTypeLeft'].fillna('Unknown').value_counts(),
+                'Groin Hernia Type (Left)', 'Hernia Type', 'Count'
+            )
+
+        elif self.current_op_type == 'PHR':
+            # typ stomie
+            self.add_bar_chart(
+                self.oper_layout,
+                df['StomaType'].fillna('Unknown').value_counts(),
+                'Type of Stoma', 'Stoma Type', 'Count'
+            )
+            # celkový počet předchozích oprav
+            total = (df['PrevRepairsRight'].fillna(0) + df['PrevRepairsLeft'].fillna(0)).astype(int)
+            self.add_bar_chart(
+                self.oper_layout,
+                total.value_counts().sort_index(),
+                'Number of Previous Repairs', 'Number of Repairs', 'Count'
+            )
+
+        elif self.current_op_type == 'PVHR':
+            # specifikace typu PVHR
+            self.add_bar_chart(
+                self.oper_layout,
+                df['PVHR_Type'].fillna('Unknown').value_counts(),
+                'PVHR Type Specification', 'PVHR Type', 'Count'
+            )
+
+        elif self.current_op_type == 'IVHR':
+            # počet předchozích oprav (incisional ventral)
+            total = (df['PrevRepairsRight'].fillna(0) + df['PrevRepairsLeft'].fillna(0)).astype(int)
+            self.add_bar_chart(
+                self.oper_layout,
+                total.value_counts().sort_index(),
+                'Number of Previous Hernia Repairs', 'Number of Repairs', 'Count'
+            )
+
+        # --- volitelně: tabulka souhrnných statistik ---
         stats = {
-            'Total operations':       len(df),
-            'Average duration (h)':   f"{df['OperationDuration_h'].mean():.2f}",
-            'Min duration (h)':       f"{df['OperationDuration_h'].min():.2f}",
-            'Max duration (h)':       f"{df['OperationDuration_h'].max():.2f}"
+            'Total ops': len(df),
+            'Avg duration (h)': f"{df['OperationDuration_h'].mean():.2f}",
+            'Min duration (h)': f"{df['OperationDuration_h'].min():.2f}",
+            'Max duration (h)': f"{df['OperationDuration_h'].max():.2f}"
         }
         table = QTableWidget(len(stats), 2)
-        table.setHorizontalHeaderLabels(['Metric', 'Value'])
-        for row, (k, v) in enumerate(stats.items()):
-            table.setItem(row, 0, QTableWidgetItem(k))
-            table.setItem(row, 1, QTableWidgetItem(str(v)))
+        table.setHorizontalHeaderLabels(['Metric','Value'])
+        for row, (k,v) in enumerate(stats.items()):
+            table.setItem(row,0,QTableWidgetItem(k))
+            table.setItem(row,1,QTableWidgetItem(str(v)))
         table.resizeColumnsToContents()
         self.oper_layout.addWidget(table)
 
