@@ -5,11 +5,12 @@ import matplotlib.pyplot as plt
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QLabel, QStackedWidget, QScrollArea, QDateEdit,
-    QTableWidget, QTableWidgetItem
+    QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView
 )
 from PyQt5 import QtCore
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
+from PyQt5.QtGui import QFont
 
 # Globální styl grafů
 plt.style.use('seaborn-v0_8-whitegrid')
@@ -212,51 +213,115 @@ class MainWindow(QMainWindow):
     # ===== Helper pro grafy =====
 
     def add_bar_chart(self, layout, data, title, xlabel, ylabel,
-                      figsize=(8,5), dpi=100, min_h=400):
+                      figsize=(8,5), dpi=100, min_h=600):
         fig = Figure(figsize=figsize, dpi=dpi)
         ax  = fig.add_subplot(111)
-        # vykreslit sloupcový graf
         data.plot(kind='bar', ax=ax)
         ax.set_title(title)
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
-        # zvýraznit svislou osu
+
+        # zvýraznit osu
         ax.spines['left'].set_linewidth(1.2)
         ax.spines['left'].set_color('#0D1B2A')
         ax.yaxis.set_ticks_position('left')
-        # přidat text nad sloupce
+
+        # navýšíme limit osy Y o 10 %, aby štítky nevycházely ven
+        max_h = data.max()
+        ax.set_ylim(0, max_h * 1.1)
+
+        # přidat text nad sloupce s malým odsazením (2 % max výšky)
         for rect in ax.patches:
-            h = int(rect.get_height())
-            ax.text(rect.get_x() + rect.get_width()/2, h,
-                    f"{h}", ha='center', va='bottom')
+            h = rect.get_height()
+            ax.text(
+                rect.get_x() + rect.get_width()/2,
+                h + max_h * 0.02,
+                f"{int(h)}",
+                ha='center', va='bottom'
+            )
+
+        fig.tight_layout()
         canvas = FigureCanvas(fig)
         canvas.setMinimumHeight(min_h)
         layout.addWidget(canvas)
 
     def add_histogram(self, layout, data, bins, title, xlabel, ylabel,
-                      figsize=(8,5), dpi=100, min_h=400):
+                      figsize=(8,5), dpi=100, min_h=600):
         fig = Figure(figsize=figsize, dpi=dpi)
         ax  = fig.add_subplot(111)
-        # vypočítat histogram
         counts, edges, patches = ax.hist(data.dropna(), bins=bins)
         ax.set_title(title)
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
-        # zvýraznit svislou osu
+
+        # zvýraznit osu
         ax.spines['left'].set_linewidth(1.2)
         ax.spines['left'].set_color('#0D1B2A')
         ax.yaxis.set_ticks_position('left')
-        # xticky na hranice intervalů
+
+        # xticky na hranice, xticklabels apod.
         ax.set_xticks(edges)
         ax.set_xticklabels([f"{int(e)}" for e in edges], rotation=45)
-        # přidat text nad sloupce
+
+        # navýšíme limit osy Y o 10 %
+        max_h = counts.max()
+        ax.set_ylim(0, max_h * 1.1)
+
+        # popisky nad sloupci
         for rect, cnt in zip(patches, counts):
-            h = int(cnt)
-            ax.text(rect.get_x() + rect.get_width()/2, h,
-                    f"{h}", ha='center', va='bottom')
+            ax.text(
+                rect.get_x() + rect.get_width()/2,
+                cnt + max_h * 0.02,
+                f"{int(cnt)}",
+                ha='center', va='bottom'
+            )
+
+        fig.tight_layout()
         canvas = FigureCanvas(fig)
         canvas.setMinimumHeight(min_h)
         layout.addWidget(canvas)
+        
+    def add_stats_table(self, layout, stats):
+        table = QTableWidget(len(stats), 2)
+        table.setHorizontalHeaderLabels(['Metric','Value'])
+        for row, (k, v) in enumerate(stats.items()):
+            item_k = QTableWidgetItem(k)
+            item_v = QTableWidgetItem(str(v))
+            item_v.setTextAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+            table.setItem(row, 0, item_k)
+            table.setItem(row, 1, item_v)
+
+        table.verticalHeader().setVisible(False)
+        table.setShowGrid(False)
+        table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        table.setSelectionMode(QAbstractItemView.NoSelection)
+        table.setAlternatingRowColors(True)
+        table.setStyleSheet("""
+            QTableWidget {
+                background-color: #FFFFFF;
+                alternate-background-color: #F0F0F0;
+            }
+            QHeaderView::section {
+                background-color: #415A77;
+                color: #E0E1DD;
+                padding: 4px;
+                font-weight: bold;
+            }
+        """)
+        header = table.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.Stretch)
+        header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
+        font = QFont()
+        font.setBold(True)
+        header.setFont(font)
+
+        # nastavíme minimální výšku: záhlaví + všechny řádky
+        row_h       = table.verticalHeader().defaultSectionSize()
+        header_h    = header.height() or 30
+        min_height  = header_h + table.rowCount() * row_h + 2
+        table.setMinimumHeight(min_height)
+
+        layout.addWidget(table)
 
     # ===== Operativní data =====
 
@@ -268,6 +333,10 @@ class MainWindow(QMainWindow):
         title.setObjectName("titleLabel")
         title.setAlignment(QtCore.Qt.AlignCenter)
         layout.addWidget(title)
+        
+        self.oper_header = QLabel()
+        self.oper_header.setAlignment(QtCore.Qt.AlignCenter)
+        layout.addWidget(self.oper_header)
 
         # zobrazíme vybraný typ
         self.oper_type_label = QLabel()
@@ -292,6 +361,10 @@ class MainWindow(QMainWindow):
         return w
 
     def update_oper_view(self):
+        ty = self.current_op_type or "All"
+        yr = self.selected_year or "All years"
+        self.oper_header.setText(f"Type: {ty} ┃ Year: {yr}")
+        
         # vyčistit layout
         for i in reversed(range(self.oper_layout.count())):
             w = self.oper_layout.itemAt(i).widget()
@@ -308,7 +381,6 @@ class MainWindow(QMainWindow):
                 pass
         if self.current_op_type:
             df = df[df['OperationType'] == self.current_op_type]
-            self.oper_type_label.setText(f"Type: {self.current_op_type}")
         else:
             self.oper_type_label.setText("Type: All")
 
@@ -395,18 +467,13 @@ class MainWindow(QMainWindow):
 
         # --- volitelně: tabulka souhrnných statistik ---
         stats = {
-            'Total ops': len(df),
-            'Avg duration (h)': f"{df['OperationDuration_h'].mean():.2f}",
-            'Min duration (h)': f"{df['OperationDuration_h'].min():.2f}",
-            'Max duration (h)': f"{df['OperationDuration_h'].max():.2f}"
+            'Total ops':            len(df),
+            'Avg duration (h)':      f"{df['OperationDuration_h'].mean():.2f}",
+            'Min duration (h)':      f"{df['OperationDuration_h'].min():.2f}",
+            'Max duration (h)':      f"{df['OperationDuration_h'].max():.2f}"
         }
-        table = QTableWidget(len(stats), 2)
-        table.setHorizontalHeaderLabels(['Metric','Value'])
-        for row, (k,v) in enumerate(stats.items()):
-            table.setItem(row,0,QTableWidgetItem(k))
-            table.setItem(row,1,QTableWidgetItem(str(v)))
-        table.resizeColumnsToContents()
-        self.oper_layout.addWidget(table)
+        self.add_stats_table(self.oper_layout, stats)
+
 
     # ===== Preop, Discharge, Followup =====
 
@@ -417,7 +484,10 @@ class MainWindow(QMainWindow):
         title.setObjectName("titleLabel")
         title.setAlignment(QtCore.Qt.AlignCenter)
         layout.addWidget(title)
-
+        
+        self.preop_header = QLabel()
+        self.preop_header.setAlignment(QtCore.Qt.AlignCenter)
+        layout.addWidget(self.preop_header)
         # Scroll area a kontejner, do kterého budeme vkládat grafy
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
@@ -430,6 +500,10 @@ class MainWindow(QMainWindow):
         return w
 
     def update_preop_view(self):
+        ty = self.current_op_type or "All"
+        yr = self.selected_year or "All years"
+        self.preop_header.setText(f"Type: {ty} ┃ Year: {yr}")
+        
         # 1) Vyčistit stávající widgety
         for i in reversed(range(self.preop_layout.count())):
             w = self.preop_layout.itemAt(i).widget()
@@ -505,13 +579,7 @@ class MainWindow(QMainWindow):
             'Median age': f"{df['Age'].median():.1f}",
             'Mean BMI': f"{df['BMI'].mean():.1f}"
         }
-        table = QTableWidget(len(stats), 2)
-        table.setHorizontalHeaderLabels(['Metric','Value'])
-        for row, (k, v) in enumerate(stats.items()):
-            table.setItem(row, 0, QTableWidgetItem(k))
-            table.setItem(row, 1, QTableWidgetItem(str(v)))
-        table.resizeColumnsToContents()
-        self.preop_layout.addWidget(table)
+        self.add_stats_table(self.preop_layout, stats)
 
 
     def create_discharge_page(self):
@@ -521,6 +589,10 @@ class MainWindow(QMainWindow):
         title.setObjectName("titleLabel")
         title.setAlignment(QtCore.Qt.AlignCenter)
         layout.addWidget(title)
+        
+        self.discharge_header = QLabel()
+        self.discharge_header.setAlignment(QtCore.Qt.AlignCenter)
+        layout.addWidget(self.discharge_header)
 
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
@@ -533,6 +605,10 @@ class MainWindow(QMainWindow):
         return w
 
     def update_discharge_view(self):
+        ty = self.current_op_type or "All"
+        yr = self.selected_year or "All years"
+        self.discharge_header.setText(f"Type: {ty} ┃ Year: {yr}")
+        
         # vyčistit
         for i in reversed(range(self.discharge_layout.count())):
             w = self.discharge_layout.itemAt(i).widget()
@@ -587,6 +663,10 @@ class MainWindow(QMainWindow):
         title.setAlignment(QtCore.Qt.AlignCenter)
         layout.addWidget(title)
 
+        self.followup_header = QLabel()
+        self.followup_header.setAlignment(QtCore.Qt.AlignCenter)
+        layout.addWidget(self.followup_header)
+        
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         container = QWidget()
@@ -598,6 +678,10 @@ class MainWindow(QMainWindow):
         return w
 
     def update_followup_view(self):
+        ty = self.current_op_type or "All"
+        yr = self.selected_year or "All years"
+        self.followup_header.setText(f"Type: {ty} ┃ Year: {yr}")
+        
         # vyčistit
         for i in reversed(range(self.followup_layout.count())):
             w = self.followup_layout.itemAt(i).widget()
