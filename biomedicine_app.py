@@ -496,15 +496,43 @@ class MainWindow(QMainWindow):
     def create_followup_page(self):
         w      = QWidget()
         layout = QVBoxLayout(w)
-        title  = QLabel("Long-Term Postoperative Data")
+        title  = QLabel("Follow-Up Complications")
         title.setObjectName("titleLabel")
         title.setAlignment(QtCore.Qt.AlignCenter)
         layout.addWidget(title)
-        scroll = QScrollArea(); scroll.setWidgetResizable(True)
-        cont   = QWidget(); vbox = QVBoxLayout(cont); vbox.setSpacing(20)
-        self.add_bar_chart(vbox, self.followup_df['Recurrence'].value_counts(),
-                           'Recurrence Rates', 'Recurrence', 'Count')
-        scroll.setWidget(cont); layout.addWidget(scroll)
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        container = QWidget()
+        vbox = QVBoxLayout(container)
+        vbox.setSpacing(20)
+
+        # 1) Occurrence of complications (sl. NB, obr. 2.126)
+        occ_counts = self.followup_df['FollowUpOccurrence'] \
+                         .map({0: 'No', 1: 'Yes'}) \
+                         .value_counts()
+        self.add_bar_chart(
+            vbox,
+            occ_counts,
+            'Occurrence of Follow-Up Complications',
+            'Occurrence',
+            'Count'
+        )
+
+        # 2) Type of complications (sl. NC-NH, obr. 2.127)
+        type_counts = self.followup_df['FollowUpType'] \
+                          .fillna('None') \
+                          .value_counts()
+        self.add_bar_chart(
+            vbox,
+            type_counts,
+            'Type of Follow-Up Complications',
+            'Complication Type',
+            'Count'
+        )
+
+        scroll.setWidget(container)
+        layout.addWidget(scroll)
         return w
 
 if __name__ == "__main__":
