@@ -1,0 +1,26 @@
+QMainWindow { background-color: #ffffff; }
+QLabel#titleLabel {
+    color: #0D1B2A;
+    font-size: 24px;
+    font-weight: bold;
+    padding:10px;
+}
+QLabel {
+    color: #0D1B2A;
+    font-size: 18px;
+}
+QPushButton {
+    background-color:rgb(30, 30, 30);
+    color: #E0E1DD;
+    border: none;
+    border-radius: 5px;
+    padding: 8px 12px;
+    font-size: 16px;
+}
+QPushButton:hover {
+    background-color:rgb(52, 52, 52);
+}
+QScrollArea {
+    background: transparent;
+    border: none;
+}
