@@ -22,46 +22,40 @@ plt.rcParams.update({
 
 def make_bar_chart(data, title, xlabel, ylabel,
                    figsize=(8,5), dpi=100, min_h=600):
-    # transparentní pozadí figury i osy
-    fig = Figure(figsize=figsize, dpi=dpi, facecolor='none')
-    ax  = fig.add_subplot(111, facecolor='none')
+    fig = Figure(figsize=figsize, dpi=dpi, facecolor='white')
+    ax  = fig.add_subplot(111, facecolor='white')
 
-    # vykreslení pruhů (výchozí barva)
-    data.plot(kind='bar', ax=ax)
+    data.plot(kind="bar", ax=ax, color="#415A77", edgecolor="#0D1B2A")
+    ax.set_title(title, color="#0D1B2A")
+    ax.set_xlabel(xlabel, color="#0D1B2A", labelpad=16)
+    ax.set_ylabel(ylabel, color="#0D1B2A")
 
-    # nadpisy a popisky os
-    ax.set_title(title)
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel(ylabel)
+    # otočíme x-štítky vodorovně
+    ax.tick_params(axis='x', rotation=0)
 
-    # zvýrazněná levá osa
-    ax.spines['left'].set_linewidth(1.2)
-    ax.spines['left'].set_color('#0D1B2A')
-    ax.yaxis.set_ticks_position('left')
+    ax.spines['left'].set_color("#0D1B2A"); ax.spines['left'].set_linewidth(1.2)
+    ax.spines['bottom'].set_color("#0D1B2A")
+    ax.yaxis.set_ticks_position("left"); ax.xaxis.set_ticks_position("bottom")
 
-    # zvětšení rozsahu Y o 10 %, aby štítky nevytékal
-    max_h = data.max()
-    ax.set_ylim(0, max_h * 1.1)
-
-    # číselné popisky nad každým sloupcem
+    max_h = data.max() or 0
+    ax.set_ylim(0, max_h * 1.4)
     for rect in ax.patches:
         h = rect.get_height()
         ax.text(
-            rect.get_x() + rect.get_width()/2,
-            h + max_h * 0.02,
-            f"{int(h)}",
-            ha='center', va='bottom'
+            rect.get_x()+rect.get_width()/2,
+            h + max_h*0.02,
+            f"{int(h)}", ha="center", va="bottom",
+            color="#0D1B2A"
         )
 
-    # lehká mřížka na ose Y
-    ax.grid(axis='y')
+    ax.grid(axis="y", color="#888888", alpha=0.3)
     fig.tight_layout()
 
-    # převod na Qt Canvas
     canvas = FigureCanvas(fig)
     canvas.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
     canvas.setMinimumHeight(min_h)
     return canvas
+
 
 def make_histogram(data, bins, title, xlabel, ylabel,
                    figsize=(8,5), dpi=100, min_h=600):
@@ -69,10 +63,14 @@ def make_histogram(data, bins, title, xlabel, ylabel,
     ax  = fig.add_subplot(111, facecolor='none')
 
     # histogram
-    counts, edges, patches = ax.hist(data.dropna(), bins=bins)
+    counts, edges, patches = ax.hist(
+        data.dropna(), bins=bins,
+        color="#415A77",      # barva výplně
+        edgecolor="#0D1B2A"    # barva okraje
+    )
 
     ax.set_title(title)
-    ax.set_xlabel(xlabel)
+    ax.set_xlabel(xlabel, labelpad=12)
     ax.set_ylabel(ylabel)
 
     ax.spines['left'].set_linewidth(1.2)
@@ -97,6 +95,7 @@ def make_histogram(data, bins, title, xlabel, ylabel,
         )
 
     ax.grid(axis='y')
+    ax.tick_params(axis='x', rotation=0)
     fig.tight_layout()
 
     canvas = FigureCanvas(fig)
