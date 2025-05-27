@@ -99,7 +99,7 @@ class FollowupPage(QWidget):
             return
 
         # 1) Occurrence of complications
-        occ_counts = df["FollowUpOccurrence"] \
+        occ_counts = df["Followup_Complications"] \
                         .map({0: "No", 1: "Yes"}) \
                         .value_counts()
         sec1 = CollapsibleSection("Occurrence of Complications")
@@ -112,7 +112,7 @@ class FollowupPage(QWidget):
         self.vlay.addWidget(sec1)
 
         # 2) Type of complications
-        type_counts = df["FollowUpType"] \
+        type_counts = df["FU_Seroma", "FU_Hematoma", "FU_Pain", "FU_SSI", "FU_Mesh_Infection", "FU_Other"] \
                           .fillna("None") \
                           .value_counts()
         sec2 = CollapsibleSection("Type of Complications")

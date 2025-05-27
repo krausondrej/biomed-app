@@ -95,7 +95,7 @@ class DischargePage(QWidget):
             return
 
         # 1) Occurrence of Intrahospital Complications
-        occ_counts = df["ComplicationOccurrence"] \
+        occ_counts = df["Intra_Complications"] \
                         .map({0: "No", 1: "Yes"}) \
                         .value_counts()
         sec1 = CollapsibleSection("Occurrence of Intrahospital Complications")
@@ -108,7 +108,7 @@ class DischargePage(QWidget):
         self.vlay.addWidget(sec1)
 
         # 2) Type of Intrahospital Complications
-        type_counts = df["ComplicationType"] \
+        type_counts = df["Comp_Bleeding", "Comp_SSI", "Comp_Mesh_Infection", "Comp_Hematoma", "Comp_Prolonged_Ileus", "Comp_Urinary_Retention", "Comp_General",] \
                           .fillna("None") \
                           .value_counts()
         sec2 = CollapsibleSection("Type of Intrahospital Complications")

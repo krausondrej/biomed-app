@@ -92,15 +92,18 @@ class MainWindow(QMainWindow):
         if year != "2021-2025":
             try:
                 yr = int(year)
-                self.oper_page.date_from.setDate(QtCore.QDate(yr,1,1))
-                self.oper_page.date_to.setDate(QtCore.QDate(yr,12,31))
+                # nastavíme SpinBoxy
+                self.oper_page.year_from.setValue(yr)
+                self.oper_page.year_to.setValue(yr)
             except ValueError:
                 pass
         else:
-            min_y = int(self.oper_df["OperationDate"].min())
-            max_y = int(self.oper_df["OperationDate"].max())
-            self.oper_page.date_from.setDate(QtCore.QDate(min_y,1,1))
-            self.oper_page.date_to.setDate(QtCore.QDate(max_y,12,31))
+            # zjistíme rozsah let
+            min_y = int(self.oper_df["Date of Operation"].dt.year.min())
+            max_y = int(self.oper_df["Date of Operation"].dt.year.max())
+            self.oper_page.year_from.setValue(min_y)
+            self.oper_page.year_to.setValue(max_y)
+
 
         self._navigate(self.year_page, self.data_page)
 

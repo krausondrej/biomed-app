@@ -1,198 +1,177 @@
 # pages/operative_page.py
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QScrollArea, QDateEdit
+from PyQt5.QtWidgets import (
+    QWidget, QVBoxLayout, QLabel, QScrollArea,
+    QSpinBox, QHBoxLayout
+)
 from PyQt5 import QtCore
+import pandas as pd
+
 from ui_helpers import CollapsibleSection
 from chart_utils import make_bar_chart, make_histogram
 from table_utils import make_stats_table
 
+
 class OperativePage(QWidget):
+    """
+    Stránka zobrazující statistiky operačních dat podle druhu hernioplastiky a roku.
+    Používá QSpinBox pro výběr roku (pouze rok, bez dne/měsíce).
+    """
     def __init__(self, main_win, df):
         super().__init__()
         self.main = main_win
-        self.df   = df
+        self.df   = df.copy()
+        # rozmezí let
+        years = self.df['Date of Operation'].dt.year
+        self.min_year = int(years.min())
+        self.max_year = int(years.max())
         self._build_ui()
 
     def _build_ui(self):
         lay = QVBoxLayout(self)
 
-        lbl = QLabel("Operative Data – Visualization and Table")
-        lbl.setObjectName("titleLabel")
-        lbl.setAlignment(QtCore.Qt.AlignCenter)
-        lay.addWidget(lbl)
+        # Nadpis
+        title = QLabel("Operative Data – Visualization and Table")
+        title.setObjectName("titleLabel")
+        title.setAlignment(QtCore.Qt.AlignCenter)
+        lay.addWidget(title)
 
-        self.header = QLabel()
-        self.header.setAlignment(QtCore.Qt.AlignCenter)
-        lay.addWidget(self.header)
-
-        # datumový rozsah
-        self.date_from = QDateEdit(calendarPopup=True)
-        self.date_to   = QDateEdit(calendarPopup=True)
-        self.date_from.setDate(QtCore.QDate(self.df["OperationDate"].min(), 1, 1))
-        self.date_to.setDate(QtCore.QDate(self.df["OperationDate"].max(), 12, 31))
-        self.date_from.dateChanged.connect(self.update_view)
-        self.date_to.dateChanged.connect(self.update_view)
-
-        # ScrollArea s průhledným pozadím a černým scrollbarem
+        # prostor pro scroll
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
-        scroll.setStyleSheet("""
-            /* Obal scroll oblasti průhledný */
-            QScrollArea {
-                background: transparent;
-                border: none;
-            }
-            /* Track scrollbaru */
-            QScrollBar:vertical {
-                background: transparent;
-                width: 12px;
-                margin: 0;
-            }
-            /* Handle scrollbaru */
-            QScrollBar::handle:vertical {
-                background: #000000;
-                min-height: 20px;
-                border-radius: 6px;
-            }
-            /* Skryj šipky */
-            QScrollBar::sub-line:vertical,
-            QScrollBar::add-line:vertical {
-                height: 0;
-            }
-            /* Prázdné partie nad i pod handle */
-            QScrollBar::sub-page:vertical,
-            QScrollBar::add-page:vertical {
-                background: none;
-            }
-        """)
-        # Transparentní viewport
-        scroll.viewport().setStyleSheet("background: transparent;")
-        scroll.viewport().setAttribute(QtCore.Qt.WA_TranslucentBackground)
-
-        # Kontejner s průhledným pozadím
+        scroll.setStyleSheet("background: transparent; border: none;")
         container = QWidget()
         container.setStyleSheet("background: transparent;")
-        container.setAttribute(QtCore.Qt.WA_TranslucentBackground)
-
         self.vlay = QVBoxLayout(container)
         self.vlay.setSpacing(20)
         self.vlay.setAlignment(QtCore.Qt.AlignTop)
-        
         scroll.setWidget(container)
         lay.addWidget(scroll)
-
+        
+        # počáteční render
+        self.update_view()
 
     def update_view(self):
-        ty = self.main.current_op_type or "All types"
-        yr = self.main.selected_year   or "All years"
-        self.header.setText(f"Type: {ty} ┃ Year: {yr}")
+        # filtr rok
+        start_y = self.year_from.value()
+        end_y   = self.year_to.value()
+        ty      = self.main.current_op_type
 
-        # vyčistit
+        # vyčistit layout
         for i in reversed(range(self.vlay.count())):
-            w = self.vlay.itemAt(i).widget()
-            if w: w.setParent(None)
+            widget = self.vlay.itemAt(i).widget()
+            if widget:
+                widget.setParent(None)
 
-        df = self.df.copy()
-        if yr != "2021-2025":
-            try:
-                df = df[df["OperationDate"] == int(yr)]
-            except ValueError:
-                pass
+        # filtrovaná data
+        df = self.df[
+            self.df['Date of Operation'].dt.year.between(start_y, end_y)
+        ]
         if ty:
-            df = df[df["OperationType"] == ty]
-        s, e = self.date_from.date().year(), self.date_to.date().year()
-        df = df[(df["OperationDate"] >= s) & (df["OperationDate"] <= e)]
+            df = df[df['Operation_Type'] == ty]
 
         if df.empty:
-            lbl = QLabel("No data for this type/year.")
+            lbl = QLabel("No data for this selection.")
             lbl.setAlignment(QtCore.Qt.AlignCenter)
             self.vlay.addWidget(lbl)
             return
 
         # 1) Indication for Surgery
         sec1 = CollapsibleSection("Indication for Surgery")
+        counts1 = df['Indication'].fillna('Unknown').value_counts()
         sec1.add_widget(make_bar_chart(
-            df["Indication"].value_counts(),
-            "Indication for Surgery", "Indication", "Count"
+            counts1, "Indication for Surgery", "Indication", "Count"
         ))
         self.vlay.addWidget(sec1)
 
-        # 2) Type-specific sections
-        if ty == "GHR":
+        # specifické sekce podle typu
+        if ty == 'GHR':
+            # Side of Hernia
             sec2 = CollapsibleSection("Side of the Hernia")
+            side_counts = pd.Series({
+                'Right': df['GHR_Side_Right'].sum(),
+                'Left':  df['GHR_Side_Left'].sum()
+            })
             sec2.add_widget(make_bar_chart(
-                df["Side"].fillna("Unknown").value_counts(),
-                "Side of the Hernia", "Side", "Count"
+                side_counts, "Side of the Hernia", "Side", "Count"
             ))
             self.vlay.addWidget(sec2)
 
+            # Previous Repairs Right
             sec3 = CollapsibleSection("Previous Repairs (Right)")
+            prev_r = df['GHR_Prev_Repairs_Right'].fillna(0).astype(int).value_counts().sort_index()
             sec3.add_widget(make_bar_chart(
-                df["PrevRepairsRight"].fillna(0).astype(int).value_counts().sort_index(),
-                "Previous Repairs (Right)", "Number of Repairs", "Count"
+                prev_r, "Previous Repairs (Right)", "Repairs", "Count"
             ))
             self.vlay.addWidget(sec3)
 
+            # Previous Repairs Left
             sec4 = CollapsibleSection("Previous Repairs (Left)")
+            prev_l = df['GHR_Prev_Repairs_Left'].fillna(0).astype(int).value_counts().sort_index()
             sec4.add_widget(make_bar_chart(
-                df["PrevRepairsLeft"].fillna(0).astype(int).value_counts().sort_index(),
-                "Previous Repairs (Left)", "Number of Repairs", "Count"
+                prev_l, "Previous Repairs (Left)", "Repairs", "Count"
             ))
             self.vlay.addWidget(sec4)
 
+            # Hernia Type Right
             sec5 = CollapsibleSection("Groin Hernia Type (Right)")
+            cols_r = [
+                'GHR_Type_Right_Lateral', 'GHR_Type_Right_Medial',
+                'GHR_Type_Right_Femoral', 'GHR_Type_Right_Obturator'
+            ]
+            type_counts_r = {col.split('GHR_Type_Right_')[1].replace('_',' '): df[col].sum() for col in cols_r}
             sec5.add_widget(make_bar_chart(
-                df["HerniaTypeRight"].fillna("Unknown").value_counts(),
-                "Groin Hernia Type (Right)", "Hernia Type", "Count"
+                pd.Series(type_counts_r),
+                "Groin Hernia Type (Right)", "Type", "Count"
             ))
             self.vlay.addWidget(sec5)
 
+            # Hernia Type Left
             sec6 = CollapsibleSection("Groin Hernia Type (Left)")
+            cols_l = [
+                'GHR_Type_Left_Lateral', 'GHR_Type_Left_Medial',
+                'GHR_Type_Left_Femoral', 'GHR_Type_Left_Obturator'
+            ]
+            type_counts_l = {col.split('GHR_Type_Left_')[1].replace('_',' '): df[col].sum() for col in cols_l}
             sec6.add_widget(make_bar_chart(
-                df["HerniaTypeLeft"].fillna("Unknown").value_counts(),
-                "Groin Hernia Type (Left)", "Hernia Type", "Count"
+                pd.Series(type_counts_l),
+                "Groin Hernia Type (Left)", "Type", "Count"
             ))
             self.vlay.addWidget(sec6)
 
-        elif ty == "PHR":
+        elif ty == 'PHR':
+            # Type of Stoma
             sec2 = CollapsibleSection("Type of Stoma")
+            stom_counts = df['PHR_Stoma_Type'].fillna('Unknown').value_counts()
             sec2.add_widget(make_bar_chart(
-                df["StomaType"].fillna("Unknown").value_counts(),
-                "Type of Stoma", "Stoma Type", "Count"
+                stom_counts, "Type of Stoma", "Stoma Type", "Count"
             ))
             self.vlay.addWidget(sec2)
-
-            sec3 = CollapsibleSection("Number of Previous Repairs")
-            total = (df["PrevRepairsRight"].fillna(0) + df["PrevRepairsLeft"].fillna(0)).astype(int)
+            # Previous Repairs
+            sec3 = CollapsibleSection("Previous Repairs")
+            prev = df['PHR_Prev_Repairs'].fillna(0).astype(int).value_counts().sort_index()
             sec3.add_widget(make_bar_chart(
-                total.value_counts().sort_index(),
-                "Number of Previous Repairs", "Number of Repairs", "Count"
+                prev, "Previous Repairs", "Repairs", "Count"
             ))
             self.vlay.addWidget(sec3)
 
-        elif ty == "PVHR":
-            sec2 = CollapsibleSection("PVHR Type Specification")
+        elif ty == 'PVHR':
+            sec2 = CollapsibleSection("PVHR Subtype")
+            sub_counts = df['PVHR_Subtype'].fillna('Unknown').value_counts()
             sec2.add_widget(make_bar_chart(
-                df["PVHR_Type"].fillna("Unknown").value_counts(),
-                "PVHR Type Specification", "PVHR Type", "Count"
+                sub_counts, "PVHR Subtype", "Subtype", "Count"
             ))
             self.vlay.addWidget(sec2)
 
-        elif ty == "IVHR":
-            sec2 = CollapsibleSection("Number of Previous Hernia Repairs")
-            total = (df["PrevRepairsRight"].fillna(0) + df["PrevRepairsLeft"].fillna(0)).astype(int)
+        elif ty == 'IVHR':
+            sec2 = CollapsibleSection("Previous Hernia Repairs")
+            prev_all = df['IVHR_Prev_Repairs'].fillna(0).astype(int).value_counts().sort_index()
             sec2.add_widget(make_bar_chart(
-                total.value_counts().sort_index(),
-                "Number of Previous Hernia Repairs", "Number of Repairs", "Count"
+                prev_all, "Previous Hernia Repairs", "Repairs", "Count"
             ))
             self.vlay.addWidget(sec2)
 
-        # 3) Statistics table
-        stats = {
-            "Total ops":         len(df),
-            "Avg duration (h)":  f"{df['OperationDuration_h'].mean():.2f}",
-            "Min duration (h)":  f"{df['OperationDuration_h'].min():.2f}",
-            "Max duration (h)":  f"{df['OperationDuration_h'].max():.2f}"
-        }
+        # summary table
+        stats = {"Total operations": len(df)}
         tbl_sec = CollapsibleSection("Summary Statistics")
         tbl_sec.add_widget(make_stats_table(stats))
         self.vlay.addWidget(tbl_sec)
