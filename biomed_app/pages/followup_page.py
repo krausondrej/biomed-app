@@ -34,6 +34,7 @@ class FollowupPage(QWidget):
         self.gender_combo = QComboBox()
         self.gender_combo.addItems(["All", "Male", "Female"])
         self.gender_combo.currentTextChanged.connect(self._filter_gender)
+        gender_layout.setContentsMargins(0, 10, 0, 0)
         gender_layout.addWidget(self.gender_combo)
         lay.addLayout(gender_layout)
 
@@ -136,18 +137,17 @@ class FollowupPage(QWidget):
 
         # 1) Occurrence of complications
         occ_counts = df["Followup_Complications"] \
-                        .map({0: "No", 1: "Yes"}) \
                         .value_counts()
         sec1 = CollapsibleSection("Occurrence of Complications")
         sec1.add_widget(make_bar_chart(
             occ_counts,
-            "Occurrence of Follow-Up Complications",
-            "Occurrence",
-            "Count"
+            "Complications at FU1",
+            "",
+            "Number"
         ))
         self.vlay.addWidget(sec1)
 
-        # 2) Type of complications
+       # 2) Type of Follow-Up Complications
         cols = [
             "FU_Seroma",
             "FU_Hematoma",
@@ -156,26 +156,84 @@ class FollowupPage(QWidget):
             "FU_Mesh_Infection",
             "FU_Other"
         ]
-        # spočítáme jedničky pro každý typ bez sčítání přes stack
-        counts = df[cols].sum()
-        counts = counts.fillna(0).astype(int)
-        type_counts = counts
+        counts = df[cols].sum().fillna(0).astype(int)
+
+        label_map = {
+            "FU_Seroma":         "Seroma",
+            "FU_Hematoma":       "Hematoma",
+            "FU_Pain":           "Pain",
+            "FU_SSI":            "Surgical site infection (SSI)",
+            "FU_Mesh_Infection": "Mesh infection",
+            "FU_Other":          "Other"
+        }
+
+        counts = counts.rename(index=label_map)
+
+        counts = counts[counts > 0]
 
         sec2 = CollapsibleSection("Type of Complications")
-        sec2.add_widget(make_bar_chart(
-            type_counts,
-            "Type of Follow-Up Complications",
-            "Complication Type",
-            "Count"
-        ))
+        if counts.empty:
+            sec2.add_widget(QLabel("No follow-up complications for selected filters."))
+        else:
+            chart = make_bar_chart(
+                counts,
+                title="Type of Complications at FU1",
+                xlabel="",
+                ylabel="Number"
+            )
+            fig = chart.figure
+            ax  = fig.axes[0]
+            for lbl in ax.get_xticklabels():
+                lbl.set_rotation(45)
+                lbl.set_ha("right")
+            fig.tight_layout()
+
+            sec2.add_widget(chart)
+
         self.vlay.addWidget(sec2)
 
-        # 3) (Volitelně) přehledová tabulka
+        # 3) Summary Statistics
+        has_comp = df["Followup_Complications"].dropna().astype(bool)
+        n_true   = int(has_comp.sum())
+        n_total  = len(df)
         stats = {
-            "Total patients":      len(df),
-            "Complications (Yes)":  occ_counts.get("Yes", 0),
-            "Complications (No)":   occ_counts.get("No", 0)
+            "Total patients":          n_total,
+            "Complications (Yes)":     n_true,
+            "Complications (No)":      n_total - n_true,
+            "Distinct complication types": len(counts[counts > 0])
         }
-        sec3 = CollapsibleSection("Summary Statistics")
-        sec3.add_widget(make_stats_table(stats))
-        self.vlay.addWidget(sec3)
+
+        # % s komplikacemi
+        stats["% with complications"] = f"{n_true/n_total*100:.1f}%"
+
+        # Průměrný počet typů komplikací na pacienta
+        comp_per_patient = df[cols].sum(axis=1)
+        stats["Avg complications/patient"] = f"{comp_per_patient.mean():.2f}"
+
+        # Nejčastější typ komplikace
+        nonzero = counts[counts > 0]
+        if not nonzero.empty:
+            stats["Most common complication"] = nonzero.idxmax()
+
+        # Celkový počet komplikací (všech typů)
+        stats["Total complication events"] = int(comp_per_patient.sum())
+
+        # Demografie podle pohlaví
+        gender_counts = df["Gender"].value_counts()
+        stats["Male %"]   = f"{gender_counts.get('male',0)/n_total*100:.1f}%"
+        stats["Female %"] = f"{gender_counts.get('female',0)/n_total*100:.1f}%"
+
+        # Trend podle let
+        yearly = df["Year"].value_counts().sort_index()
+        if not yearly.empty:
+            stats["Years covered"]    = f"{yearly.index.min()}–{yearly.index.max()}"
+            stats["Avg patients/year"] = f"{yearly.mean():.1f}"
+
+        # Vložení do GUI
+        tbl_sec = CollapsibleSection("Summary Statistics")
+        wrapper = QWidget()
+        wrapper_lay = QVBoxLayout(wrapper)
+        wrapper_lay.setContentsMargins(0, 10, 0, 0)
+        wrapper_lay.addWidget(make_stats_table(stats))
+        tbl_sec.add_widget(wrapper)
+        self.vlay.addWidget(tbl_sec)

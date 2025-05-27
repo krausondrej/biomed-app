@@ -36,6 +36,7 @@ class DischargePage(QWidget):
         self.gender_combo = QComboBox()
         self.gender_combo.addItems(["All", "Male", "Female"])
         self.gender_combo.currentTextChanged.connect(self._filter_gender)
+        gender_layout.setContentsMargins(0, 10, 0, 0)
         gender_layout.addWidget(self.gender_combo)
         lay.addLayout(gender_layout)
 
@@ -71,7 +72,6 @@ class DischargePage(QWidget):
         # read current filters
         ty    = getattr(self.main, 'current_op_type', 'All') or 'All'
         yr    = getattr(self.main, 'selected_year', 'All') or 'All'
-        gender = self.selected_gender or 'All'
 
         # clear previous content
         for i in reversed(range(self.vlay.count())):
@@ -96,6 +96,9 @@ class DischargePage(QWidget):
         
         self.header.setText(f"Operation: {ty}   |   Year: {yr_sel}   |   Number of Result: {len(df)}")
 
+        if self.selected_gender.lower() in ["male", "female"]:
+                    df = df[df["Gender"] == self.selected_gender.lower()]
+                    
         # empty dataset: no records
         if df.empty:
             lbl = QLabel("No discharge data for selected filters.")
@@ -111,9 +114,9 @@ class DischargePage(QWidget):
         else:
             sec1.add_widget(make_bar_chart(
                 occ_counts,
-                'Occurrence of Intrahospital Complications',
-                'Occurrence',
-                'Count'
+                'Intrahospital complications',
+                '',
+                'Number'
             ))
         self.vlay.addWidget(sec1)
 
@@ -123,35 +126,73 @@ class DischargePage(QWidget):
             'Comp_Hematoma', 'Comp_Prolonged_Ileus',
             'Comp_Urinary_Retention', 'Comp_General'
         ]
-        # 1) spočítáme jedničky v každém sloupci (skipna=True ignoruje NaNy)
-        counts = df[cols].sum()
+        counts = df[cols].sum().fillna(0).astype(int)
 
-        # 2) převedeme na int (a doplníme 0 tam, kde by byla NaN)
-        counts = counts.fillna(0).astype(int)
-
-        # 3) vybereme jen ty s >0 (NaN už tu nejsou, ale zároveň nebudeme mít 0ky)
         type_counts = counts[counts > 0]
+
+        label_map = {
+            'Comp_Bleeding':           "Bleeding complications",
+            'Comp_SSI':                "Surgical site infection (SSI)",
+            'Comp_Mesh_Infection':     "Mesh infection",
+            'Comp_Hematoma':           "Hematoma",
+            'Comp_Prolonged_Ileus':    "Prolonged ileus or obstruction",
+            'Comp_Urinary_Retention':  "Urinary retention",
+            'Comp_General':            "General complications"
+        }
+
+        type_counts = type_counts.rename(index=label_map)
 
         sec2 = CollapsibleSection('Type of Intrahospital Complications')
         if type_counts.sum() == 0:
             sec2.add_widget(QLabel('No complication types for selected filters.'))
         else:
-            sec2.add_widget(make_bar_chart(
+            chart = make_bar_chart(
                 type_counts,
-                'Type of Intrahospital Complications',
-                'Complication Type',
-                'Count'
-            ))
+                title='Type of Intraope. surgical complications',
+                xlabel='',
+                ylabel='Number'
+            )
+            fig = chart.figure
+            ax  = fig.axes[0]
+            for lbl in ax.get_xticklabels():
+                lbl.set_rotation(45)
+                lbl.set_ha('right')
+            fig.tight_layout()
+
+            sec2.add_widget(chart)
+
         self.vlay.addWidget(sec2)
 
-
         # 3) Summary Statistics
+        has_comp = df['Intra_Complications'].dropna().astype(bool)
+        n_true  = has_comp.sum()
+        n_total = len(df)
         stats = {
-            'Total patients':              len(df),
-            'Complications (Yes)':         occ_counts.get('Yes', 0),
-            'Complications (No)':          occ_counts.get('No', 0),
-            'Distinct complication types': len(type_counts)
+            'Total patients':              n_total,
+            'Complications (Yes)':         n_true,
+            'Complications (No)':          n_total - n_true,
+            'Distinct complication types': len(type_counts),
         }
+
+        stats["% with complications"] = f"{n_true/n_total*100:.1f}%"
+
+        comp_counts_per_patient = df[cols].sum(axis=1)
+        stats["Avg complications/patient"] = f"{comp_counts_per_patient.mean():.2f}"
+
+        if type_counts.any():
+            stats["Most common complication"] = type_counts.idxmax()
+
+        stats["Total complication events"] = int(type_counts.sum())
+
+        gender_counts = df["Gender"].value_counts()
+        stats["Male %"]   = f"{gender_counts.get('male',0)/n_total*100:.1f}%"
+        stats["Female %"] = f"{gender_counts.get('female',0)/n_total*100:.1f}%"
+
+        yearly = df["Year"].value_counts().sort_index()
+        if not yearly.empty:
+            stats["Years covered"]    = f"{yearly.index.min()}–{yearly.index.max()}"
+            stats["Avg ops per year"] = f"{yearly.mean():.1f}"
+
         sec3 = CollapsibleSection('Summary Statistics')
         sec3.add_widget(make_stats_table(stats))
         self.vlay.addWidget(sec3)
