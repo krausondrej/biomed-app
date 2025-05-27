@@ -83,13 +83,6 @@ class PreopPage(QWidget):
         
         self.header.setText(f"Operation: {ty}   |   Year: {yr_sel}   |   Number of Result: {len(df)}")
 
-        # Filtrace DataFrame
-        df = self.df_master.copy()
-        if yr != "2021-2025":
-            try:
-                df = df[df["Year"] == int(yr)]
-            except ValueError:
-                pass
         if self.selected_gender.lower() in ["male", "female"]:
             df = df[df["Gender"] == self.selected_gender.lower()]
 
