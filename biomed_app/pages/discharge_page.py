@@ -108,9 +108,18 @@ class DischargePage(QWidget):
         self.vlay.addWidget(sec1)
 
         # 2) Type of Intrahospital Complications
-        type_counts = df["Comp_Bleeding", "Comp_SSI", "Comp_Mesh_Infection", "Comp_Hematoma", "Comp_Prolonged_Ileus", "Comp_Urinary_Retention", "Comp_General",] \
-                          .fillna("None") \
-                          .value_counts()
+        type_counts = df[
+            [
+            "Comp_Bleeding",
+            "Comp_SSI",
+            "Comp_Mesh_Infection",
+            "Comp_Hematoma",
+            "Comp_Prolonged_Ileus",
+            "Comp_Urinary_Retention",
+            "Comp_General"
+            ]
+        ].stack().value_counts()
+
         sec2 = CollapsibleSection("Type of Intrahospital Complications")
         sec2.add_widget(make_bar_chart(
             type_counts,

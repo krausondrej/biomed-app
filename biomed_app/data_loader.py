@@ -1,3 +1,4 @@
+# data_loader.py
 import os
 import pandas as pd
 
@@ -98,6 +99,14 @@ def load_oper_data():
         'Please specify type of primary ventral hernia': 'PVHR_Subtype',
         'Number of previous hernia repairs': 'IVHR_Prev_Repairs',
     })
+    
+    op_map = {
+    'Groin Hernia Repair':        'GHR',
+    'Parastomal Hernia Repair':    'PHR',
+    'Primary Ventral Hernia Repair': 'PVHR',
+    'Incisional Ventral Hernia Repair': 'IVHR'
+    }
+    df['Operation_Type'] = df['Operation_Type'].map(op_map)
     return df
 
 
@@ -132,3 +141,4 @@ def load_followup_data():
     for col in ['FU_Seroma', 'FU_Hematoma', 'FU_Pain', 'FU_SSI', 'FU_Mesh_Infection', 'FU_Other']:
         df[col] = df[col].fillna(0).astype(int)
     return df
+

@@ -112,9 +112,17 @@ class FollowupPage(QWidget):
         self.vlay.addWidget(sec1)
 
         # 2) Type of complications
-        type_counts = df["FU_Seroma", "FU_Hematoma", "FU_Pain", "FU_SSI", "FU_Mesh_Infection", "FU_Other"] \
-                          .fillna("None") \
-                          .value_counts()
+        type_counts = df[
+            [
+                "FU_Seroma",
+                "FU_Hematoma",
+                "FU_Pain",
+                "FU_SSI",
+                "FU_Mesh_Infection",
+                "FU_Other"
+            ]
+        ].stack().value_counts()
+
         sec2 = CollapsibleSection("Type of Complications")
         sec2.add_widget(make_bar_chart(
             type_counts,

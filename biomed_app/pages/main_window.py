@@ -88,23 +88,6 @@ class MainWindow(QMainWindow):
         # data_page.py má atribut self.lbl
         self.data_page.lbl.setText(f"Year: {year}")
 
-        # pokud chcete přednastavit rozsah QDateEdit na OperativePage
-        if year != "2021-2025":
-            try:
-                yr = int(year)
-                # nastavíme SpinBoxy
-                self.oper_page.year_from.setValue(yr)
-                self.oper_page.year_to.setValue(yr)
-            except ValueError:
-                pass
-        else:
-            # zjistíme rozsah let
-            min_y = int(self.oper_df["Date of Operation"].dt.year.min())
-            max_y = int(self.oper_df["Date of Operation"].dt.year.max())
-            self.oper_page.year_from.setValue(min_y)
-            self.oper_page.year_to.setValue(max_y)
-
-
         self._navigate(self.year_page, self.data_page)
 
     def show_category_page(self, category):
