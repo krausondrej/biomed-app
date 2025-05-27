@@ -80,6 +80,7 @@ def load_preop_data():
 def load_oper_data():
     df = df_all.copy()
     df = df.rename(columns={
+        'Gender of the patient': 'Gender',
         'Please choose the indication for the abdominal wall repair': 'Operation_Type',
         'Indication for the surgery?': 'Indication',
         'Side of the groin hernia? Bilateral?::Right': 'GHR_Side_Right',
@@ -113,6 +114,8 @@ def load_oper_data():
 def load_discharge_data():
     df = df_all.copy()
     df = df.rename(columns={
+        'Gender of the patient': 'Gender',
+        'Please choose the indication for the abdominal wall repair': 'Operation_Type',
         'Where there intrahospital  complications ?': 'Intra_Complications',
         'Please enter the type of intrahospital complications::Bleeding complications': 'Comp_Bleeding',
         'Please enter the type of intrahospital complications::Surgical site infection (SSI)': 'Comp_SSI',
@@ -124,12 +127,22 @@ def load_discharge_data():
     })
     for col in ['Comp_Bleeding', 'Comp_SSI', 'Comp_Mesh_Infection', 'Comp_Hematoma', 'Comp_Prolonged_Ileus', 'Comp_Urinary_Retention', 'Comp_General']:
         df[col] = df[col].fillna(0).astype(int)
+        
+    op_map = {
+        'Groin Hernia Repair':        'GHR',
+        'Parastomal Hernia Repair':    'PHR',
+        'Primary Ventral Hernia Repair':'PVHR',
+        'Incisional Ventral Hernia Repair':'IVHR'
+    }
+    df['Operation_Type'] = df_all['Please choose the indication for the abdominal wall repair']\
+                               .map(op_map)
     return df
 
 
 def load_followup_data():
     df = df_all.copy()
     df = df.rename(columns={
+        'Gender of the patient': 'Gender',
         'Where there  complications at Follow Up ?': 'Followup_Complications',
         'Please enter the type of complications at Follow Up::Seroma': 'FU_Seroma',
         'Please enter the type of complications at Follow Up::Hematoma': 'FU_Hematoma',

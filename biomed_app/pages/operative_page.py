@@ -1,8 +1,8 @@
 import pandas as pd
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QScrollArea
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QScrollArea, QHBoxLayout, QComboBox
 from PyQt5 import QtCore
 from ui_helpers import CollapsibleSection
-from chart_utils import make_bar_chart, make_histogram
+from chart_utils import make_bar_chart
 from table_utils import make_stats_table
 
 class OperativePage(QWidget):
@@ -10,6 +10,7 @@ class OperativePage(QWidget):
         super().__init__()
         self.main = main_win
         self.df   = df
+        self.selected_gender = "All"
         self._build_ui()
 
     def _build_ui(self):
@@ -23,6 +24,19 @@ class OperativePage(QWidget):
         self.header = QLabel("")
         self.header.setAlignment(QtCore.Qt.AlignCenter)
         lay.addWidget(self.header)
+        
+        # Filtr pohlaví
+        gender_layout = QHBoxLayout()
+        gender_layout.setSpacing(20)
+        gender_layout.setAlignment(QtCore.Qt.AlignHCenter)
+        gender_label = QLabel("Sex filter:")
+        gender_label.setObjectName("filterLabel")
+        gender_layout.addWidget(gender_label)
+        self.gender_combo = QComboBox()
+        self.gender_combo.addItems(["All", "Male", "Female"])
+        self.gender_combo.currentTextChanged.connect(self._filter_gender)
+        gender_layout.addWidget(self.gender_combo)
+        lay.addLayout(gender_layout)
 
         # ScrollArea with transparent background and black scrollbar
         scroll = QScrollArea()
@@ -52,6 +66,10 @@ class OperativePage(QWidget):
 
         scroll.setWidget(container)
         lay.addWidget(scroll)
+        
+    def _filter_gender(self, gender_text):
+        self.selected_gender = gender_text
+        self.update_view()
 
     def update_view(self):
         # clear previous widgets
@@ -76,8 +94,11 @@ class OperativePage(QWidget):
                 pass
 
         # update header
-        self.header.setText(f"Operace: {ty}   |   Rok: {yr_sel}   |   Počet záznamů: {len(df)}")
+        self.header.setText(f"Operation: {ty}   |   Year: {yr_sel}   |   Number of Result: {len(df)}")
 
+        if self.selected_gender.lower() in ["male", "female"]:
+            df = df[df["Gender"] == self.selected_gender.lower()]
+            
         # 1) Indication for Surgery
         sec1 = CollapsibleSection("Indication for Surgery")
         sec1.add_widget(make_bar_chart(

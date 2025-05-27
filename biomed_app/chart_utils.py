@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from PyQt5.QtWidgets import QSizePolicy
-from PyQt5 import QtCore
 
 # Globální styl přesně jako v aplikaci
 plt.style.use('seaborn-v0_8-whitegrid')

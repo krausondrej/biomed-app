@@ -9,6 +9,7 @@ class PreopPage(QWidget):
     def __init__(self, main_win, df):
         super().__init__()
         self.main = main_win
+        self.df   = df
         # Master DataFrame pro filtrování
         self.df_master = df.copy()
         self.selected_gender = "All"
@@ -28,7 +29,7 @@ class PreopPage(QWidget):
         self.header = QLabel()
         self.header.setAlignment(QtCore.Qt.AlignCenter)
         lay.addWidget(self.header)
-
+        
         # Filtr pohlaví
         gender_layout = QHBoxLayout()
         gender_layout.setSpacing(20)
@@ -37,7 +38,7 @@ class PreopPage(QWidget):
         gender_label.setObjectName("filterLabel")
         gender_layout.addWidget(gender_label)
         self.gender_combo = QComboBox()
-        self.gender_combo.addItems(["All", "male", "female"])
+        self.gender_combo.addItems(["All", "Male", "Female"])
         self.gender_combo.currentTextChanged.connect(self._filter_gender)
         gender_layout.addWidget(self.gender_combo)
         lay.addLayout(gender_layout)
@@ -59,15 +60,28 @@ class PreopPage(QWidget):
         self.update_view()
 
     def update_view(self):
-        ty = self.main.current_op_type or "All types"
-        yr = self.main.selected_year or "All years"
-        self.header.setText(f"Type: {ty} ┃ Year: {yr}")
-
         # Vyčistit staré widgety
         for i in reversed(range(self.vlay.count())):
             w = self.vlay.itemAt(i).widget()
             if w:
                 w.setParent(None)
+                
+        ty = self.main.current_op_type
+        yr_sel = self.main.selected_year
+
+        # filter dataframe
+        df = self.df.copy()
+        if isinstance(yr_sel, str) and '-' in yr_sel:
+            start, end = map(int, yr_sel.split('-'))
+            df = df[df['Year'].between(start, end)]
+        else:
+            try:
+                yr = int(yr_sel)
+                df = df[df['Year'] == yr]
+            except Exception:
+                pass
+        
+        self.header.setText(f"Operation: {ty}   |   Year: {yr_sel}   |   Number of Result: {len(df)}")
 
         # Filtrace DataFrame
         df = self.df_master.copy()
