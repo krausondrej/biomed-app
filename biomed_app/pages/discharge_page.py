@@ -1,6 +1,8 @@
-# pages/discharge_page.py
 import pandas as pd
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QScrollArea, QHBoxLayout, QComboBox
+from PyQt5.QtWidgets import (
+    QWidget, QVBoxLayout, QLabel, QScrollArea,
+    QHBoxLayout, QComboBox
+)
 from PyQt5 import QtCore
 from ui_helpers import CollapsibleSection
 from chart_utils import make_bar_chart
@@ -15,184 +17,197 @@ class DischargePage(QWidget):
         self._build_ui()
 
     def _build_ui(self):
-        lay = QVBoxLayout(self)
+        # Root layout with margins and spacing
+        root = QVBoxLayout(self)
+        root.setContentsMargins(30, 20, 30, 20)
+        root.setSpacing(15)
 
-        lbl = QLabel("Intrahospital Complications")
-        lbl.setObjectName("titleLabel")
-        lbl.setAlignment(QtCore.Qt.AlignCenter)
-        lay.addWidget(lbl)
+        # Title
+        title = QLabel("INTRAHOSPITAL COMPLICATIONS")
+        title.setObjectName("titleLabel")
+        title.setAlignment(QtCore.Qt.AlignCenter)
+        root.addWidget(title)
 
-        self.header = QLabel()
+        # Subtitle / header
+        self.header = QLabel("")
+        self.header.setObjectName("subtitleLabel")
         self.header.setAlignment(QtCore.Qt.AlignCenter)
-        lay.addWidget(self.header)
-        
+        root.addWidget(self.header)
+
         # Gender filter
         gender_layout = QHBoxLayout()
-        gender_layout.setSpacing(20)
-        gender_layout.setAlignment(QtCore.Qt.AlignHCenter)
-        gender_label = QLabel("Sex filter:")
+        gender_layout.setSpacing(10)
+        gender_layout.setAlignment(QtCore.Qt.AlignCenter)
+
+        gender_label = QLabel("Sex:")
         gender_label.setObjectName("filterLabel")
         gender_layout.addWidget(gender_label)
+
         self.gender_combo = QComboBox()
         self.gender_combo.addItems(["All", "Male", "Female"])
         self.gender_combo.currentTextChanged.connect(self._filter_gender)
-        gender_layout.setContentsMargins(0, 10, 0, 0)
         gender_layout.addWidget(self.gender_combo)
-        lay.addLayout(gender_layout)
 
-        # Scrollable container
+        root.addLayout(gender_layout)
+
+        # Scroll area for collapsible sections
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
+        scroll.setObjectName("dataScroll")
         scroll.setStyleSheet("""
-            QScrollArea { background: transparent; border: none; }
-            QScrollBar:vertical { background: transparent; width: 12px; margin: 0; }
-            QScrollBar::handle:vertical { background: #000000; min-height: 20px; border-radius: 6px; }
-            QScrollBar::sub-line:vertical, QScrollBar::add-line:vertical { height: 0; }
-            QScrollBar::sub-page:vertical, QScrollBar::add-page:vertical { background: none; }
+            QScrollArea#dataScroll { background: #F9F9F9; border: none; }
         """)
-        scroll.viewport().setStyleSheet("background: transparent;")
-        scroll.viewport().setAttribute(QtCore.Qt.WA_TranslucentBackground)
 
         container = QWidget()
-        container.setStyleSheet("background: transparent;")
-        container.setAttribute(QtCore.Qt.WA_TranslucentBackground)
-
-        self.vlay = QVBoxLayout(container)
-        self.vlay.setSpacing(20)
-        self.vlay.setAlignment(QtCore.Qt.AlignTop)
+        container.setObjectName("scrollContainer")
+        vlay = QVBoxLayout(container)
+        vlay.setContentsMargins(0, 10, 0, 10)
+        vlay.setSpacing(20)
 
         scroll.setWidget(container)
-        lay.addWidget(scroll)
+        root.addWidget(scroll)
+        self.vlay = vlay
+
+        # Apply stylesheet
+        self.setStyleSheet("""
+            /* Title */
+            #titleLabel {
+                font-size: 24px;
+                font-weight: bold;
+                margin-bottom: 5px;
+            }
+            /* Subtitle */
+            #subtitleLabel {
+                font-size: 14px;
+                color: #555555;
+                margin-bottom: 15px;
+            }
+            /* Filter label */
+            #filterLabel {
+                font-size: 14px;
+                color: #333333;
+            }
+            /* Scroll container background */
+            #scrollContainer {
+                background: #FFFFFF;
+                border-radius: 8px;
+                padding: 15px;
+            }
+        """)
 
     def _filter_gender(self, gender_text):
         self.selected_gender = gender_text
         self.update_view()
 
     def update_view(self):
-        # read current filters
-        ty    = getattr(self.main, 'current_op_type', 'All') or 'All'
-        yr    = getattr(self.main, 'selected_year', 'All') or 'All'
+        ty = self.main.current_op_type or "All types"
+        yr = self.main.selected_year   or "All years"
+        df = self.df.copy()
 
-        # clear previous content
+        # Year filtering
+        if isinstance(yr, str) and '-' in yr:
+            start, end = map(int, yr.split('-'))
+            df = df[df['Year'].between(start, end)]
+        else:
+            try:
+                year = int(yr)
+                df = df[df['Year'] == year]
+            except ValueError:
+                pass
+
+        # Gender filtering
+        if self.selected_gender.lower() in ["male", "female"]:
+            df = df[df['Gender'] == self.selected_gender.lower()]
+
+        # Update header text
+        self.header.setText(f"Operation: {ty}   |   Year: {yr}   |   N = {len(df)}")
+
+        # Clear previous content
         for i in reversed(range(self.vlay.count())):
             w = self.vlay.itemAt(i).widget()
             if w:
                 w.setParent(None)
 
-        ty = self.main.current_op_type
-        yr_sel = self.main.selected_year
-
-        # filter dataframe
-        df = self.df.copy()
-        if isinstance(yr_sel, str) and '-' in yr_sel:
-            start, end = map(int, yr_sel.split('-'))
-            df = df[df['Year'].between(start, end)]
-        else:
-            try:
-                yr = int(yr_sel)
-                df = df[df['Year'] == yr]
-            except Exception:
-                pass
-        
-        self.header.setText(f"Operation: {ty}   |   Year: {yr_sel}   |   Number of Result: {len(df)}")
-
-        if self.selected_gender.lower() in ["male", "female"]:
-                    df = df[df["Gender"] == self.selected_gender.lower()]
-                    
-        # empty dataset: no records
+        # Handle empty dataset
         if df.empty:
-            lbl = QLabel("No discharge data for selected filters.")
-            lbl.setAlignment(QtCore.Qt.AlignCenter)
-            self.vlay.addWidget(lbl)
+            empty_lbl = QLabel("No discharge data for selected filters.")
+            empty_lbl.setAlignment(QtCore.Qt.AlignCenter)
+            self.vlay.addWidget(empty_lbl)
             return
 
-        # 1) Occurrence of Intrahospital Complications
+        # 1) Occurrence of complications
         occ_counts = df['Intra_Complications'].value_counts()
         sec1 = CollapsibleSection('Occurrence of Intrahospital Complications')
         if occ_counts.empty:
-            sec1.add_widget(QLabel('No data for selected filters.'))
+            msg = QLabel('No data for selected filters.')
+            msg.setAlignment(QtCore.Qt.AlignCenter)
+            sec1.add_widget(msg)
         else:
-            sec1.add_widget(make_bar_chart(
+            chart1 = make_bar_chart(
                 occ_counts,
-                'Intrahospital complications',
-                '',
-                'Number'
-            ))
+                'Intrahospital Complications', '', 'Count'
+            )
+            sec1.add_widget(chart1)
         self.vlay.addWidget(sec1)
 
-        # 2) Type of Intrahospital Complications
+        # 2) Type of complications
         cols = [
             'Comp_Bleeding', 'Comp_SSI', 'Comp_Mesh_Infection',
             'Comp_Hematoma', 'Comp_Prolonged_Ileus',
             'Comp_Urinary_Retention', 'Comp_General'
         ]
         counts = df[cols].sum().fillna(0).astype(int)
-
-        type_counts = counts[counts > 0]
-
+        counts = counts[counts > 0]
         label_map = {
-            'Comp_Bleeding':           "Bleeding complications",
-            'Comp_SSI':                "Surgical site infection (SSI)",
-            'Comp_Mesh_Infection':     "Mesh infection",
-            'Comp_Hematoma':           "Hematoma",
-            'Comp_Prolonged_Ileus':    "Prolonged ileus or obstruction",
-            'Comp_Urinary_Retention':  "Urinary retention",
-            'Comp_General':            "General complications"
+            'Comp_Bleeding': 'Bleeding',
+            'Comp_SSI': 'SSI',
+            'Comp_Mesh_Infection': 'Mesh Infection',
+            'Comp_Hematoma': 'Hematoma',
+            'Comp_Prolonged_Ileus': 'Prolonged Ileus',
+            'Comp_Urinary_Retention': 'Urinary Retention',
+            'Comp_General': 'General'
         }
-
-        type_counts = type_counts.rename(index=label_map)
+        counts = counts.rename(index=label_map)
 
         sec2 = CollapsibleSection('Type of Intrahospital Complications')
-        if type_counts.sum() == 0:
-            sec2.add_widget(QLabel('No complication types for selected filters.'))
+        if counts.empty:
+            msg2 = QLabel('No complication types for selected filters.')
+            msg2.setAlignment(QtCore.Qt.AlignCenter)
+            sec2.add_widget(msg2)
         else:
-            chart = make_bar_chart(
-                type_counts,
-                title='Type of Intraope. surgical complications',
-                xlabel='',
-                ylabel='Number'
+            chart2 = make_bar_chart(
+                counts,
+                title='Complication Types', xlabel='', ylabel='Count'
             )
-            fig = chart.figure
-            ax  = fig.axes[0]
+            # rotate labels
+            fig, ax = chart2.figure, chart2.figure.axes[0]
             for lbl in ax.get_xticklabels():
                 lbl.set_rotation(45)
                 lbl.set_ha('right')
-            fig.tight_layout()
-
-            sec2.add_widget(chart)
-
+            chart2.figure.tight_layout()
+            sec2.add_widget(chart2)
         self.vlay.addWidget(sec2)
 
-        # 3) Summary Statistics
-        has_comp = df['Intra_Complications'].dropna().astype(bool)
-        n_true  = has_comp.sum()
+        # 3) Summary statistics
         n_total = len(df)
+        has = df['Intra_Complications'].dropna().astype(bool)
+        n_true = has.sum()
+
         stats = {
-            'Total patients':              n_total,
-            'Complications (Yes)':         n_true,
-            'Complications (No)':          n_total - n_true,
-            'Distinct complication types': len(type_counts),
+            'Total patients': n_total,
+            'With complications': int(n_true),
+            'Without complications': n_total - int(n_true),
+            '% with complications': f"{n_true/n_total*100:.1f}%"
         }
-
-        stats["% with complications"] = f"{n_true/n_total*100:.1f}%"
-
-        comp_counts_per_patient = df[cols].sum(axis=1)
-        stats["Avg complications/patient"] = f"{comp_counts_per_patient.mean():.2f}"
-
-        if type_counts.any():
-            stats["Most common complication"] = type_counts.idxmax()
-
-        stats["Total complication events"] = int(type_counts.sum())
-
-        gender_counts = df["Gender"].value_counts()
-        stats["Male %"]   = f"{gender_counts.get('male',0)/n_total*100:.1f}%"
-        stats["Female %"] = f"{gender_counts.get('female',0)/n_total*100:.1f}%"
-
-        yearly = df["Year"].value_counts().sort_index()
-        if not yearly.empty:
-            stats["Years covered"]    = f"{yearly.index.min()}–{yearly.index.max()}"
-            stats["Avg ops per year"] = f"{yearly.mean():.1f}"
+        # additional demographics
+        gender_counts = df['Gender'].value_counts()
+        stats['Male %']   = f"{gender_counts.get('male',0)/n_total*100:.1f}%"
+        stats['Female %'] = f"{gender_counts.get('female',0)/n_total*100:.1f}%"
 
         sec3 = CollapsibleSection('Summary Statistics')
-        sec3.add_widget(make_stats_table(stats))
+        wrapper = QWidget()
+        wrapper_lay = QVBoxLayout(wrapper)
+        wrapper_lay.setContentsMargins(0, 10, 0, 0)   # left, top=20px, right, bottom
+        wrapper_lay.addWidget(make_stats_table(stats))
+        sec3.add_widget(wrapper)
         self.vlay.addWidget(sec3)

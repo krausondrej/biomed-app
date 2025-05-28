@@ -1,55 +1,62 @@
-# table_utils.py
-from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView
+from PyQt5.QtWidgets import (
+    QTableWidget, QTableWidgetItem, QHeaderView,
+    QAbstractItemView, QSizePolicy
+)
 from PyQt5.QtGui import QFont
 from PyQt5 import QtCore
 
 def make_stats_table(stats: dict):
     table = QTableWidget(len(stats), 2)
-    table.setHorizontalHeaderLabels(["Metric","Value"])
-    for row, (k,v) in enumerate(stats.items()):
+    table.setHorizontalHeaderLabels(["Metric", "Value"])
+
+    # Naplnění buněk
+    for row, (k, v) in enumerate(stats.items()):
         item_k = QTableWidgetItem(k)
         item_v = QTableWidgetItem(str(v))
         item_v.setTextAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         table.setItem(row, 0, item_k)
         table.setItem(row, 1, item_v)
 
-    # Enable grid and set style for borders
+    # Nastavení velikostní politiky tak, aby se tabulka roztahovala na šířku
+    table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+
+    # Režimy roztažení sloupců: 
+    #   Metric – podle obsahu, Value – vyplní zbývající prostor
+    hdr = table.horizontalHeader()
+    hdr.setSectionResizeMode(0, QHeaderView.ResizeToContents)
+    hdr.setSectionResizeMode(1, QHeaderView.Stretch)
+
+    # Vzhled
     table.setShowGrid(True)
     table.setGridStyle(QtCore.Qt.SolidLine)
-
-    # Style via stylesheet to define cell and header borders
     table.setStyleSheet("""
         QTableWidget {
             background-color: transparent;
             alternate-background-color: rgba(255,255,255,0.1);
         }
         QTableWidget::item {
-            border: 1px solid #444;  /* cell border */
+            border: 1px solid #CCCCCC;
         }
         QHeaderView::section {
             background-color: black;
             color: #E0E1DD;
-            padding: 4px;
             font-weight: bold;
-            border: 1px solid #666;  /* header border */
+            border: 1px solid #666;
         }
     """)
 
-    # Hide vertical header and disable editing/selecting
+    # Skrýt vertikální hlavičku, zamknout úpravy i výběr
     table.verticalHeader().setVisible(False)
     table.setEditTriggers(QAbstractItemView.NoEditTriggers)
     table.setSelectionMode(QAbstractItemView.NoSelection)
     table.setAlternatingRowColors(True)
 
-    # Adjust column sizing
-    hdr = table.horizontalHeader()
-    hdr.setSectionResizeMode(0, QHeaderView.Stretch)
-    hdr.setSectionResizeMode(1, QHeaderView.ResizeToContents)
+    # Tučný font pro záhlaví
     font = QFont()
     font.setBold(True)
     hdr.setFont(font)
 
-    # Set minimum height based on content
+    # Spočítat výšku a šířku
     row_h = table.verticalHeader().defaultSectionSize()
     hdr_h = hdr.height() or 30
     table.setMinimumHeight(hdr_h + table.rowCount()*row_h + 2)

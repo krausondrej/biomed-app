@@ -2,9 +2,11 @@
 import numpy as np
 import pandas as pd
 from matplotlib.figure import Figure
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QScrollArea, QComboBox, QHBoxLayout, QSizePolicy
+from PyQt5.QtWidgets import (
+    QWidget, QVBoxLayout, QLabel, QScrollArea,
+    QComboBox, QHBoxLayout, QSizePolicy
+)
 from PyQt5 import QtCore
-import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from ui_helpers import CollapsibleSection
 from chart_utils import make_bar_chart, make_histogram
@@ -14,68 +16,89 @@ class PreopPage(QWidget):
     def __init__(self, main_win, df):
         super().__init__()
         self.main = main_win
-        self.df   = df
-        # Master DataFrame pro filtrování
+        # Originální DataFrame uchováváme pro reset filtru
         self.df_master = df.copy()
         self.selected_gender = "All"
         self._build_ui()
 
     def _build_ui(self):
-        lay = QVBoxLayout(self)
-        lay.setContentsMargins(0,0,0,0)
-        lay.setSpacing(2)
+        # Root layout s odsazením a mezerami
+        root = QVBoxLayout(self)
+        root.setContentsMargins(30, 20, 30, 20)
+        root.setSpacing(20)
 
-        title = QLabel("Preoperative Data – Visualization and Table")
+        # Titulek
+        title = QLabel("PREOPERATIVE DATA")
         title.setObjectName("titleLabel")
         title.setAlignment(QtCore.Qt.AlignCenter)
-        lay.addWidget(title)
+        root.addWidget(title)
 
-        # Header pro typ a rok
-        self.header = QLabel()
+        # Podtitulek pro typ operace a rok
+        self.header = QLabel("")
+        self.header.setObjectName("subtitleLabel")
         self.header.setAlignment(QtCore.Qt.AlignCenter)
-        lay.addWidget(self.header)
-        
-        # Filtr pohlaví
+        root.addWidget(self.header)
+
+        # Filtr podle pohlaví
         gender_layout = QHBoxLayout()
-        gender_layout.setAlignment(QtCore.Qt.AlignHCenter)
-        gender_label = QLabel("Sex filter:")
+        gender_layout.setSpacing(10)
+        gender_layout.setAlignment(QtCore.Qt.AlignCenter)
+
+        gender_label = QLabel("Sex:")
         gender_label.setObjectName("filterLabel")
         gender_layout.addWidget(gender_label)
+
         self.gender_combo = QComboBox()
         self.gender_combo.addItems(["All", "Male", "Female"])
         self.gender_combo.currentTextChanged.connect(self._filter_gender)
-        gender_layout.setContentsMargins(0, 10, 0, 0)
         gender_layout.addWidget(self.gender_combo)
-        lay.addLayout(gender_layout)
 
-        # ScrollArea with transparent background and black scrollbar
+        root.addLayout(gender_layout)
+
+        # Scroll area pro sekce
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
+        scroll.setObjectName("dataScroll")
         scroll.setStyleSheet("""
-            /* Container transparent */
-            QScrollArea { background: transparent; border: none; }
-            /* Track */
-            QScrollBar:vertical { background: transparent; width: 12px; margin: 0; }
-            /* Handle */
-            QScrollBar::handle:vertical { background: #000000; min-height: 20px; border-radius: 6px; }
-            /* Hide arrows */
-            QScrollBar::sub-line:vertical, QScrollBar::add-line:vertical { height: 0; }
-            /* Empty areas */
-            QScrollBar::sub-page:vertical, QScrollBar::add-page:vertical { background: none; }
+            QScrollArea#dataScroll { background: #F9F9F9; border: none; }
         """)
-        scroll.viewport().setStyleSheet("background: transparent;")
-        scroll.viewport().setAttribute(QtCore.Qt.WA_TranslucentBackground)
 
         container = QWidget()
-        container.setStyleSheet("background: transparent;")
-        container.setAttribute(QtCore.Qt.WA_TranslucentBackground)
-
-        self.vlay = QVBoxLayout(container)
-        self.vlay.setSpacing(20)
-        self.vlay.setAlignment(QtCore.Qt.AlignTop)
+        container.setObjectName("scrollContainer")
+        vlay = QVBoxLayout(container)
+        vlay.setContentsMargins(0, 10, 0, 10)
+        vlay.setSpacing(20)
 
         scroll.setWidget(container)
-        lay.addWidget(scroll)
+        root.addWidget(scroll)
+        self.vlay = vlay
+
+        # Společné CSS pro stránku
+        self.setStyleSheet("""
+            /* Titulek */
+            #titleLabel {
+                font-size: 24px;
+                font-weight: bold;
+                margin-bottom: 5px;
+            }
+            /* Podtitulek */
+            #subtitleLabel {
+                font-size: 14px;
+                color: #555555;
+                margin-bottom: 15px;
+            }
+            /* Popisek filtru */
+            #filterLabel {
+                font-size: 14px;
+                color: #333333;
+            }
+            /* Kontejner scrollu */
+            #scrollContainer {
+                background: #FFFFFF;
+                border-radius: 8px;
+                padding: 15px;
+            }
+        """)
 
     def _filter_gender(self, gender_text):
         self.selected_gender = gender_text
@@ -87,27 +110,29 @@ class PreopPage(QWidget):
             w = self.vlay.itemAt(i).widget()
             if w:
                 w.setParent(None)
-                
+
         ty = self.main.current_op_type
         yr_sel = self.main.selected_year
+        df = self.df_master.copy()
 
-        # filter dataframe
-        df = self.df.copy()
+        # Filtrace podle roku
         if isinstance(yr_sel, str) and '-' in yr_sel:
             start, end = map(int, yr_sel.split('-'))
             df = df[df['Year'].between(start, end)]
         else:
             try:
-                yr = int(yr_sel)
-                df = df[df['Year'] == yr]
-            except Exception:
+                df = df[df['Year'] == int(yr_sel)]
+            except:
                 pass
-        
-        self.header.setText(f"Operation: {ty}   |   Year: {yr_sel}   |   Number of Result: {len(df)}")
 
+        # Aktualizace podtitulku
+        self.header.setText(f"Operation: {ty}   |   Year: {yr_sel}   |   N = {len(df)}")
+
+        # Filtrace podle pohlaví
         if self.selected_gender.lower() in ["male", "female"]:
-            df = df[df["Gender"] == self.selected_gender.lower()]
+            df = df[df['Gender'] == self.selected_gender.lower()]
 
+        # Pokud je prázdný dataset
         if df.empty:
             lbl = QLabel("No data for selected filters.")
             lbl.setAlignment(QtCore.Qt.AlignCenter)
