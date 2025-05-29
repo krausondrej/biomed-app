@@ -32,21 +32,4 @@ class SplashScreen(QSplashScreen):
         gif_path = os.path.join(base_path, "biomed_app",
                                 "resources", "loading.gif")
         self.movie = QMovie(gif_path)
-        self.label.setMovie(self.movie)
-        self.movie.start()
-
-        # Text
-        self.text = QLabel("Načítání dat...")
-        self.text.setAlignment(Qt.AlignCenter)
-        self.text.setStyleSheet("font-size: 16px;")
-
-        # Přidej do layoutu
-        layout.addWidget(self.label)
-        layout.addWidget(self.text)
-
-    def center_on_screen(self):
-        screen = self.screen().geometry()
-        self.move(
-            (screen.width() - self.width()) // 2,
-            (screen.height() - self.height()) // 2
-        )
+        self.lab

@@ -121,24 +121,57 @@ class FollowupPage(QWidget):
         self.update_view()
 
     def update_view(self):
-        ty = self.main.current_op_type or "All types"
-        yr = self.main.selected_year or "All years"
+        if self.df is None or self.df.empty:
+            lbl = QLabel("Chyba: Data nejsou dostupná.")
+            lbl.setAlignment(QtCore.Qt.AlignCenter)
+            self.vlay.addWidget(lbl)
+            return
         df = self.df.copy()
 
-        # filter by year
-        if isinstance(yr, str) and '-' in yr:
-            start, end = map(int, yr.split('-'))
-            df = df[df['Year'].between(start, end)]
+        ty = self.main.current_op_type or "All types"
+        yr = self.main.selected_year or "All years"
+
+        # filtr podle roku
+        if 'Year' in df.columns:
+            if isinstance(yr, str) and '-' in yr:
+                try:
+                    start, end = map(int, yr.split('-'))
+                    df = df[df['Year'].between(start, end)]
+                except:
+                    pass
+            else:
+                try:
+                    year = int(yr)
+                    df = df[df['Year'] == year]
+                except ValueError:
+                    pass
         else:
-            try:
-                year = int(yr)
-                df = df[df['Year'] == year]
-            except ValueError:
-                pass
+            warn_lbl = QLabel("Upozornění: Sloupec 'Year' není dostupný.")
+            warn_lbl.setAlignment(QtCore.Qt.AlignCenter)
+            self.vlay.addWidget(warn_lbl)
+
+        # gender filter
+        if self.selected_gender.lower() in ["male", "female"]:
+            if 'Gender' in df.columns:
+                df = df[df['Gender'] == self.selected_gender.lower()]
+            else:
+                warn_lbl = QLabel("Upozornění: Sloupec 'Gender' není dostupný.")
+                warn_lbl.setAlignment(QtCore.Qt.AlignCenter)
+                self.vlay.addWidget(warn_lbl)
+
+        # age filter
+        if self.selected_age_group != "All":
+            if "Age" in df.columns:
+                df = df[df["Age"] == self.selected_age_group]
+            else:
+                warn_lbl = QLabel("Upozornění: Sloupec 'Age' není dostupný.")
+                warn_lbl.setAlignment(QtCore.Qt.AlignCenter)
+                self.vlay.addWidget(warn_lbl)
 
         # update header
         self.header.setText(
-            f"Operation: {ty}   |   Year: {yr}   |   N = {len(df)}")
+            f"Operation: {ty}   |   Year: {yr}   |   N = {len(df)}"
+        )
 
         # clear old widgets
         for i in reversed(range(self.vlay.count())):
@@ -146,15 +179,19 @@ class FollowupPage(QWidget):
             if w:
                 w.setParent(None)
 
-        # gender filter
-        if self.selected_gender.lower() in ["male", "female"]:
-            df = df[df['Gender'] == self.selected_gender.lower()]
-
-        # age filter
-        if self.selected_age_group != "All":
-            df = df[df["Age"] == self.selected_age_group]
+        if df.empty:
+            empty_lbl = QLabel("Žádná data pro zvolený filtr.")
+            empty_lbl.setAlignment(QtCore.Qt.AlignCenter)
+            self.vlay.addWidget(empty_lbl)
+            return
 
         # 1) Occurrence of complications
+        if 'Followup_Complications' not in df.columns:
+            err_lbl = QLabel("Chyba: Sloupec 'Followup_Complications' chybí.")
+            err_lbl.setAlignment(QtCore.Qt.AlignCenter)
+            self.vlay.addWidget(err_lbl)
+            return
+
         occ_counts = df['Followup_Complications'].value_counts()
         sec1 = CollapsibleSection("Occurrence of Complications")
         chart1 = make_bar_chart(
@@ -163,7 +200,6 @@ class FollowupPage(QWidget):
             "",
             "Count"
         )
-
         sec1.add_widget(add_download_button(chart1, "Download Bar Chart"))
         self.vlay.addWidget(sec1)
 
@@ -172,6 +208,13 @@ class FollowupPage(QWidget):
             'FU_Seroma', 'FU_Hematoma', 'FU_Pain',
             'FU_SSI', 'FU_Mesh_Infection', 'FU_Other'
         ]
+        missing_cols = [col for col in cols if col not in df.columns]
+        if missing_cols:
+            warn_lbl = QLabel(f"Chyba: Chybí sloupce: {', '.join(missing_cols)}.")
+            warn_lbl.setAlignment(QtCore.Qt.AlignCenter)
+            self.vlay.addWidget(warn_lbl)
+            return
+
         counts = df[cols].sum().fillna(0).astype(int)
         label_map = {
             'FU_Seroma': 'Seroma',
@@ -197,7 +240,6 @@ class FollowupPage(QWidget):
                 ylabel="Count"
             )
             sec2.add_widget(add_download_button(chart2, "Download Bar Chart"))
-
         self.vlay.addWidget(sec2)
 
         # 3) Summary Statistics
@@ -207,14 +249,13 @@ class FollowupPage(QWidget):
             'Total patients': n_total,
             'With complications': n_comp,
             'Without complications': n_total - n_comp,
-            '% with complications': f"{n_comp/n_total*100:.1f}%"
+            '% with complications': f"{n_comp/n_total*100:.1f}%" if n_total > 0 else "N/A"
         }
+
         sec3 = CollapsibleSection("Summary Statistics")
         wrapper = QWidget()
         wrapper_lay = QVBoxLayout(wrapper)
-        # left, top=20px, right, bottom
         wrapper_lay.setContentsMargins(0, 10, 0, 0)
         wrapper_lay.addWidget(make_stats_table(stats))
-
         sec3.add_widget(wrapper)
         self.vlay.addWidget(sec3)

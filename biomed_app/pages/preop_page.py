@@ -134,35 +134,60 @@ class PreopPage(QWidget):
             if w:
                 w.setParent(None)
 
+        # Základní kontrola vstupu
+        if self.df_master is None or self.df_master.empty:
+            lbl = QLabel("Chyba: Data nejsou dostupná.")
+            lbl.setAlignment(QtCore.Qt.AlignCenter)
+            self.vlay.addWidget(lbl)
+            return
+
         ty = self.main.current_op_type
         yr_sel = self.main.selected_year
         df = self.df_master.copy()
 
-        # Filtrace podle roku
-        if isinstance(yr_sel, str) and '-' in yr_sel:
-            start, end = map(int, yr_sel.split('-'))
-            df = df[df['Year'].between(start, end)]
+        # Bezpečná filtrace podle roku
+        if 'Year' in df.columns:
+            if isinstance(yr_sel, str) and '-' in yr_sel:
+                try:
+                    start, end = map(int, yr_sel.split('-'))
+                    df = df[df['Year'].between(start, end)]
+                except:
+                    pass
+            else:
+                try:
+                    df = df[df['Year'] == int(yr_sel)]
+                except:
+                    pass
         else:
-            try:
-                df = df[df['Year'] == int(yr_sel)]
-            except:
-                pass
-
-        # Aktualizace podtitulku
-        self.header.setText(
-            f"Operation: {ty}   |   Year: {yr_sel}   |   N = {len(df)}")
+            lbl = QLabel("Upozornění: Sloupec 'Year' není dostupný.")
+            lbl.setAlignment(QtCore.Qt.AlignCenter)
+            self.vlay.addWidget(lbl)
 
         # Filtrace podle pohlaví
         if self.selected_gender.lower() in ["male", "female"]:
-            df = df[df['Gender'] == self.selected_gender.lower()]
+            if 'Gender' in df.columns:
+                df = df[df['Gender'] == self.selected_gender.lower()]
+            else:
+                lbl = QLabel("Upozornění: Sloupec 'Gender' není dostupný.")
+                lbl.setAlignment(QtCore.Qt.AlignCenter)
+                self.vlay.addWidget(lbl)
 
         # Filtrace podle věku
         if self.selected_age_group != "All":
-            df = df[df["Age"] == self.selected_age_group]
+            if "Age" in df.columns:
+                df = df[df["Age"] == self.selected_age_group]
+            else:
+                lbl = QLabel("Upozornění: Sloupec 'Age' není dostupný.")
+                lbl.setAlignment(QtCore.Qt.AlignCenter)
+                self.vlay.addWidget(lbl)
 
-        # Pokud je prázdný dataset
+        # Aktualizace podtitulku
+        self.header.setText(
+            f"Operation: {ty}   |   Year: {yr_sel}   |   N = {len(df)}"
+        )
+
         if df.empty:
-            lbl = QLabel("No data for selected filters.")
+            lbl = QLabel("Žádná data pro zvolený filtr.")
             lbl.setAlignment(QtCore.Qt.AlignCenter)
             self.vlay.addWidget(lbl)
             return
@@ -470,64 +495,4 @@ class PreopPage(QWidget):
         for barset in (bars1, bars2):
             for rect in barset:
                 h = rect.get_height()
-                ax.text(
-                    rect.get_x() + rect.get_width() / 2,
-                    h + max_h * 0.02,
-                    f"{int(h)}",
-                    ha="center", va="bottom",
-                    color="#0D1B2A",
-                    fontsize=9
-                )
-
-        ax.set_title("Aesthetic Discomfort Score", color="#0D1B2A")
-        ax.set_xlabel("Discomfort Score", color="#0D1B2A", labelpad=16)
-        ax.set_ylabel("Count", color="#0D1B2A")
-        ax.set_xticks(x)
-        ax.set_xticklabels(all_scores, rotation=0)
-        ax.legend()
-
-        ax.spines['left'].set_color("#0D1B2A")
-        ax.spines['left'].set_linewidth(1.2)
-        ax.spines['bottom'].set_color("#0D1B2A")
-        ax.yaxis.set_ticks_position("left")
-        ax.xaxis.set_ticks_position("bottom")
-        ax.grid(axis="y", color="#888888", alpha=0.3)
-        ax.set_ylim(0, max_h * 1.4)
-
-        fig.tight_layout()
-
-        canvas = FigureCanvas(fig)
-        canvas.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        canvas.setMinimumHeight(600)
-
-        sec7.add_widget(add_download_button(canvas, "Download Bar Chart"))
-        self.vlay.addWidget(sec7)
-
-        # 8) Summary table
-        df['Age_numeric'] = pd.to_numeric(df['Age'], errors='coerce')
-
-        stats = {
-            "Total patients": len(df),
-            "Males": df["Gender"].value_counts().get("male", 0),
-            "Females": df["Gender"].value_counts().get("female", 0),
-            "Male %": f"{df['Gender'].value_counts(normalize=True).get('male', 0)*100:.1f}%",
-            "Female %": f"{df['Gender'].value_counts(normalize=True).get('female', 0)*100:.1f}%",
-            "Mean BMI": f"{df['BMI'].mean():.1f}" if not df['BMI'].dropna().empty else "N/A",
-            "Median BMI": f"{df['BMI'].median():.1f}" if not df['BMI'].dropna().empty else "N/A",
-            "BMI Std Dev": f"{df['BMI'].std():.1f}" if not df['BMI'].dropna().empty else "N/A",
-            "Min BMI": f"{df['BMI'].min():.1f}" if not df['BMI'].dropna().empty else "N/A",
-            "Max BMI": f"{df['BMI'].max():.1f}" if not df['BMI'].dropna().empty else "N/A",
-            "Mean Pain (rest)": f"{df['Pain_rest'].mean():.1f}" if not df['Pain_rest'].dropna().empty else "N/A",
-            "Mean Pain (activity)": f"{df['Pain_activity'].mean():.1f}" if not df['Pain_activity'].dropna().empty else "N/A",
-            "Mean Pain (last week)": f"{df['Pain_last_week'].mean():.1f}" if not df['Pain_last_week'].dropna().empty else "N/A",
-            "Mean Comorbidities": f"{df[['Diabetes', 'COPD', 'Renal_Disease', 'Smoker']].sum(axis=1).mean():.2f}"
-        }
-
-        tbl_sec = CollapsibleSection("Basic Statistics")
-        wrapper = QWidget()
-        wrapper_lay = QVBoxLayout(wrapper)
-        # left, top=20px, right, bottom
-        wrapper_lay.setContentsMargins(0, 10, 0, 0)
-        wrapper_lay.addWidget(make_stats_table(stats))
-        tbl_sec.add_widget(wrapper)
-        self.vlay.addWidget(tbl_sec)
+                ax.t

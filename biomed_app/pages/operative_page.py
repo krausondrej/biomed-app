@@ -148,31 +148,61 @@ class OperativePage(QWidget):
             if w:
                 w.setParent(None)
 
+        if self.df is None or self.df.empty:
+            lbl = QLabel("Chyba: Data nejsou dostupná.")
+            lbl.setAlignment(QtCore.Qt.AlignCenter)
+            self.vlay.addWidget(lbl)
+            return
+
         ty = self.main.current_op_type
         yr_sel = self.main.selected_year
         df = self.df.copy()
 
         # Year filtering
-        if isinstance(yr_sel, str) and '-' in yr_sel:
-            start, end = map(int, yr_sel.split('-'))
-            df = df[df['Year'].between(start, end)]
+        if 'Year' in df.columns:
+            if isinstance(yr_sel, str) and '-' in yr_sel:
+                try:
+                    start, end = map(int, yr_sel.split('-'))
+                    df = df[df['Year'].between(start, end)]
+                except Exception:
+                    pass
+            else:
+                try:
+                    yr = int(yr_sel)
+                    df = df[df['Year'] == yr]
+                except Exception:
+                    pass
         else:
-            try:
-                yr = int(yr_sel)
-                df = df[df['Year'] == yr]
-            except Exception:
-                pass
+            lbl = QLabel("Upozornění: Sloupec 'Year' chybí.")
+            lbl.setAlignment(QtCore.Qt.AlignCenter)
+            self.vlay.addWidget(lbl)
+
+        # Gender filtering
+        if self.selected_gender.lower() in ["male", "female"]:
+            if "Gender" in df.columns:
+                df = df[df["Gender"] == self.selected_gender.lower()]
+            else:
+                lbl = QLabel("Upozornění: Sloupec 'Gender' chybí.")
+                lbl.setAlignment(QtCore.Qt.AlignCenter)
+                self.vlay.addWidget(lbl)
+
+        # Filtrace podle věku
+        if self.selected_age_group != "All":
+            if "Age" in df.columns:
+                df = df[df["Age"] == self.selected_age_group]
+            else:
+                lbl = QLabel("Upozornění: Sloupec 'Age' chybí.")
+                lbl.setAlignment(QtCore.Qt.AlignCenter)
+                self.vlay.addWidget(lbl)
 
         # Header update
         self.header.setText(f"{ty}  |  {yr_sel}  |  N = {len(df)}")
 
-        # Gender filtering
-        if self.selected_gender.lower() in ["male", "female"]:
-            df = df[df["Gender"] == self.selected_gender.lower()]
-
-        # Filtrace podle věku
-        if self.selected_age_group != "All":
-            df = df[df["Age"] == self.selected_age_group]
+        if df.empty:
+            lbl = QLabel("Žádná data pro zvolený filtr.")
+            lbl.setAlignment(QtCore.Qt.AlignCenter)
+            self.vlay.addWidget(lbl)
+            return
 
         # 1) Indication for Surgery
         sec1 = CollapsibleSection("Indication for Surgery")
@@ -303,64 +333,4 @@ class OperativePage(QWidget):
                 df["PVHR_Subtype"].value_counts(),
                 "PVHR Subtypes", "", "Count"
             )
-            chart_pv.setObjectName("chartWrapper")
-
-            sec_pv.add_widget(add_download_button(
-                chart_pv, "Download Bar Chart"))
-            self.vlay.addWidget(sec_pv)
-
-        elif ty == "IVHR":
-            sec_iv = CollapsibleSection("Previous Hernia Repairs")
-            rep_iv = df["IVHR_Prev_Repairs"].dropna().astype(int)
-            cnt_iv = rep_iv.value_counts().sort_index()
-            cnt_iv = cnt_iv[cnt_iv.index > 0]
-            chart_iv = make_bar_chart(
-                cnt_iv, "Previous Repairs", "", "Count"
-            )
-            chart_iv.setObjectName("chartWrapper")
-
-            sec_iv.add_widget(add_download_button(
-                chart_iv, "Download Bar Chart"))
-            self.vlay.addWidget(sec_iv)
-
-        # Summary Statistics
-        stats = {
-            "Total ops": len(df),
-            "Males": df["Gender"].value_counts().get("male", 0),
-            "Females": df["Gender"].value_counts().get("female", 0)
-        }
-        total = stats["Total ops"]
-        if total:
-            stats["Male %"] = f"{stats['Males']/total*100:.1f}%"
-            stats["Female %"] = f"{stats['Females']/total*100:.1f}%"
-
-        # Type-specific summary
-        if ty == "GHR":
-            right = df["GHR_Side_Right"].fillna(0).astype(int)
-            left = df["GHR_Side_Left"].fillna(0).astype(int)
-            bilat = ((right == 1) & (left == 1)).sum()
-            stats.update({
-                "Right %":     f"{(right == 1).sum()/total*100:.1f}%",
-                "Left %":      f"{(left == 1).sum()/total*100:.1f}%",
-                "Bilateral %": f"{bilat/total*100:.1f}%",
-                "Avg Repairs R": f"{df['GHR_Prev_Repairs_Right'].dropna().mean():.1f}",
-                "Avg Repairs L": f"{df['GHR_Prev_Repairs_Left'].dropna().mean():.1f}"
-            })
-        elif ty == "PHR":
-            stats["Avg Repairs"] = f"{df['PHR_Prev_Repairs'].dropna().mean():.1f}"
-            if not df["PHR_Stoma_Type"].dropna().empty:
-                stats["Common Stoma"] = df["PHR_Stoma_Type"].value_counts().idxmax()
-        elif ty == "PVHR":
-            if not df["PVHR_Subtype"].dropna().empty:
-                stats["Common Subtype"] = df["PVHR_Subtype"].value_counts().idxmax()
-        elif ty == "IVHR":
-            stats["Avg Repairs"] = f"{df['IVHR_Prev_Repairs'].dropna().mean():.1f}"
-
-        tbl_sec = CollapsibleSection("Summary Statistics")
-        wrapper = QWidget()
-        wrapper_lay = QVBoxLayout(wrapper)
-        # left, top=20px, right, bottom
-        wrapper_lay.setContentsMargins(0, 10, 0, 0)
-        wrapper_lay.addWidget(make_stats_table(stats))
-        tbl_sec.add_widget(wrapper)
-        self.vlay.addWidget(tbl_sec)
+ 

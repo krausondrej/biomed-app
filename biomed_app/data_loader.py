@@ -94,6 +94,7 @@ def load_oper_data():
     df = df_all.copy()
     df = df.rename(columns={
         'Gender of the patient': 'Gender',
+        'Age of patient at day of operation': 'Age',
         'Please choose the indication for the abdominal wall repair': 'Operation_Type',
         'Indication for the surgery?': 'Indication',
         'Side of the groin hernia? Bilateral?::Right': 'GHR_Side_Right',
@@ -128,6 +129,7 @@ def load_discharge_data():
     df = df_all.copy()
     df = df.rename(columns={
         'Gender of the patient': 'Gender',
+        'Age of patient at day of operation': 'Age',
         'Please choose the indication for the abdominal wall repair': 'Operation_Type',
         'Where there intrahospital  complications ?': 'Intra_Complications',
         'Please enter the type of intrahospital complications::Bleeding complications': 'Comp_Bleeding',
@@ -156,6 +158,7 @@ def load_followup_data():
     df = df_all.copy()
     df = df.rename(columns={
         'Gender of the patient': 'Gender',
+        'Age of patient at day of operation': 'Age',
         'Where there  complications at Follow Up ?': 'Followup_Complications',
         'Please enter the type of complications at Follow Up::Seroma': 'FU_Seroma',
         'Please enter the type of complications at Follow Up::Hematoma': 'FU_Hematoma',

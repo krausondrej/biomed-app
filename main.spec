@@ -31,20 +31,4 @@ exe = EXE(
     argv_emulation=False,
     target_arch=None,
     codesign_identity=None,
-    entitlements_file=None,
-)
-coll = COLLECT(
-    exe,
-    a.binaries,
-    a.datas,
-    strip=False,
-    upx=True,
-    upx_exclude=[],
-    name='main',
-)
-app = BUNDLE(
-    coll,
-    name='main.app',
-    icon=None,
-    bundle_identifier=None,
-)
+    entitlemen

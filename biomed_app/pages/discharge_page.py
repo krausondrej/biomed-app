@@ -122,32 +122,57 @@ class DischargePage(QWidget):
         self.update_view()
 
     def update_view(self):
-        ty = self.main.current_op_type or "All types"
-        yr = self.main.selected_year or "All years"
+        if self.df is None or self.df.empty:
+            lbl = QLabel("Chyba: Data nejsou dostupná.")
+            lbl.setAlignment(QtCore.Qt.AlignCenter)
+            self.vlay.addWidget(lbl)
+            return
         df = self.df.copy()
 
+        ty = self.main.current_op_type or "All types"
+        yr = self.main.selected_year or "All years"
+
         # Year filtering
-        if isinstance(yr, str) and '-' in yr:
-            start, end = map(int, yr.split('-'))
-            df = df[df['Year'].between(start, end)]
+        if 'Year' in df.columns:
+            if isinstance(yr, str) and '-' in yr:
+                try:
+                    start, end = map(int, yr.split('-'))
+                    df = df[df['Year'].between(start, end)]
+                except:
+                    pass
+            else:
+                try:
+                    year = int(yr)
+                    df = df[df['Year'] == year]
+                except ValueError:
+                    pass
         else:
-            try:
-                year = int(yr)
-                df = df[df['Year'] == year]
-            except ValueError:
-                pass
+            warn_lbl = QLabel("Upozornění: Sloupec 'Year' není dostupný.")
+            warn_lbl.setAlignment(QtCore.Qt.AlignCenter)
+            self.vlay.addWidget(warn_lbl)
 
         # Gender filtering
         if self.selected_gender.lower() in ["male", "female"]:
-            df = df[df['Gender'] == self.selected_gender.lower()]
+            if 'Gender' in df.columns:
+                df = df[df['Gender'] == self.selected_gender.lower()]
+            else:
+                lbl = QLabel("Upozornění: Sloupec 'Gender' chybí.")
+                lbl.setAlignment(QtCore.Qt.AlignCenter)
+                self.vlay.addWidget(lbl)
 
-        # age filter
+        # Age filter
         if self.selected_age_group != "All":
-            df = df[df["Age"] == self.selected_age_group]
+            if "Age" in df.columns:
+                df = df[df["Age"] == self.selected_age_group]
+            else:
+                warn_lbl = QLabel("Upozornění: Sloupec 'Age' není dostupný.")
+                warn_lbl.setAlignment(QtCore.Qt.AlignCenter)
+                self.vlay.addWidget(warn_lbl)
 
         # Update header text
         self.header.setText(
-            f"Operation: {ty}   |   Year: {yr}   |   N = {len(df)}")
+            f"Operation: {ty}   |   Year: {yr}   |   N = {len(df)}"
+        )
 
         # Clear previous content
         for i in reversed(range(self.vlay.count())):
@@ -155,7 +180,6 @@ class DischargePage(QWidget):
             if w:
                 w.setParent(None)
 
-        # Handle empty dataset
         if df.empty:
             empty_lbl = QLabel("No discharge data for selected filters.")
             empty_lbl.setAlignment(QtCore.Qt.AlignCenter)
@@ -163,6 +187,12 @@ class DischargePage(QWidget):
             return
 
         # 1) Occurrence of complications
+        if 'Intra_Complications' not in df.columns:
+            err_lbl = QLabel(
+                "Chyba: Sloupec 'Intra_Complications' není dostupný.")
+            err_lbl.setAlignment(QtCore.Qt.AlignCenter)
+            self.vlay.addWidget(err_lbl)
+            return
         occ_counts = df['Intra_Complications'].value_counts()
         sec1 = CollapsibleSection('Occurrence of Intrahospital Complications')
         if occ_counts.empty:
@@ -175,7 +205,6 @@ class DischargePage(QWidget):
                 'Intrahospital Complications', '', 'Count'
             )
             sec1.add_widget(add_download_button(chart1, "Download Bar Chart"))
-
         self.vlay.addWidget(sec1)
 
         # 2) Type of complications
@@ -184,6 +213,14 @@ class DischargePage(QWidget):
             'Comp_Hematoma', 'Comp_Prolonged_Ileus',
             'Comp_Urinary_Retention', 'Comp_General'
         ]
+        missing_cols = [c for c in cols if c not in df.columns]
+        if missing_cols:
+            err_lbl = QLabel(
+                f"Chyba: Chybí sloupce: {', '.join(missing_cols)}.")
+            err_lbl.setAlignment(QtCore.Qt.AlignCenter)
+            self.vlay.addWidget(err_lbl)
+            return
+
         counts = df[cols].sum().fillna(0).astype(int)
         counts = counts[counts > 0]
         label_map = {
@@ -207,14 +244,12 @@ class DischargePage(QWidget):
                 counts,
                 title='Complication Types', xlabel='', ylabel='Count'
             )
-            # rotate labels
-            fig, ax = chart2.figure, chart2.figure.axes[0]
+            ax = chart2.figure, chart2.figure.axes[0]
             for lbl in ax.get_xticklabels():
                 lbl.set_rotation(45)
                 lbl.set_ha('right')
             chart2.figure.tight_layout()
             sec2.add_widget(add_download_button(chart2, "Download Bar Chart"))
-
         self.vlay.addWidget(sec2)
 
         # 3) Summary statistics
@@ -226,17 +261,17 @@ class DischargePage(QWidget):
             'Total patients': n_total,
             'With complications': int(n_true),
             'Without complications': n_total - int(n_true),
-            '% with complications': f"{n_true/n_total*100:.1f}%"
+            '% with complications': f"{n_true/n_total*100:.1f}%" if n_total > 0 else "N/A"
         }
-        # additional demographics
-        gender_counts = df['Gender'].value_counts()
-        stats['Male %'] = f"{gender_counts.get('male', 0)/n_total*100:.1f}%"
-        stats['Female %'] = f"{gender_counts.get('female', 0)/n_total*100:.1f}%"
+
+        if 'Gender' in df.columns:
+            gender_counts = df['Gender'].value_counts()
+            stats['Male %'] = f"{gender_counts.get('male', 0)/n_total*100:.1f}%" if n_total > 0 else "N/A"
+            stats['Female %'] = f"{gender_counts.get('female', 0)/n_total*100:.1f}%" if n_total > 0 else "N/A"
 
         sec3 = CollapsibleSection('Summary Statistics')
         wrapper = QWidget()
         wrapper_lay = QVBoxLayout(wrapper)
-        # left, top=20px, right, bottom
         wrapper_lay.setContentsMargins(0, 10, 0, 0)
         wrapper_lay.addWidget(make_stats_table(stats))
         sec3.add_widget(wrapper)

@@ -63,4 +63,3 @@ def make_stats_table(stats: dict):
     hdr_h = hdr.height() or 30
     table.setMinimumHeight(hdr_h + table.rowCount()*row_h + 2)
 
-    return table

@@ -69,28 +69,4 @@ class CollapsibleSection(QWidget):
 
     def add_widget(self, widget: QWidget):
         """Přidá widget (graf, tabulku…) do rozbalitelné oblasti."""
-        self.content_layout.addWidget(widget)
-
-
-def add_download_button(canvas, label="Download graph"):
-    container = QWidget()
-    layout = QVBoxLayout()
-    container.setLayout(layout)
-
-    layout.addWidget(canvas)
-
-    btn = QPushButton(label)
-    layout.addWidget(btn)
-
-    def save_graph():
-        file_path, _ = QFileDialog.getSaveFileName(
-            None,
-            "Save Graph",
-            "",
-            "PNG Files (*.png);;All Files (*)"
-        )
-        if file_path:
-            canvas.figure.savefig(file_path)
-
-    btn.clicked.connect(save_graph)
-    return container
+        self.conte
