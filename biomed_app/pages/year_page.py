@@ -1,7 +1,7 @@
 # pages/year_page.py
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QPushButton,
-    QHBoxLayout, QSpacerItem, QSizePolicy
+    QHBoxLayout
 )
 from PyQt5 import QtCore
 

@@ -1,4 +1,3 @@
-import pandas as pd
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QScrollArea,
     QHBoxLayout, QComboBox
@@ -7,6 +6,8 @@ from PyQt5 import QtCore
 from ui_helpers import CollapsibleSection
 from chart_utils import make_bar_chart
 from table_utils import make_stats_table
+from ui_helpers import add_download_button
+
 
 class FollowupPage(QWidget):
     def __init__(self, main_win, df):
@@ -136,7 +137,8 @@ class FollowupPage(QWidget):
             "",
             "Count"
         )
-        sec1.add_widget(chart1)
+        
+        sec1.add_widget(add_download_button(chart1, "Download Bar Chart"))
         self.vlay.addWidget(sec1)
 
         # 2) Type of complications
@@ -168,7 +170,8 @@ class FollowupPage(QWidget):
                 xlabel="Type",
                 ylabel="Count"
             )
-            sec2.add_widget(chart2)
+            sec2.add_widget(add_download_button(chart2, "Download Bar Chart"))
+            
         self.vlay.addWidget(sec2)
 
         # 3) Summary Statistics
@@ -185,5 +188,6 @@ class FollowupPage(QWidget):
         wrapper_lay = QVBoxLayout(wrapper)
         wrapper_lay.setContentsMargins(0, 10, 0, 0)   # left, top=20px, right, bottom
         wrapper_lay.addWidget(make_stats_table(stats))
+        
         sec3.add_widget(wrapper)
         self.vlay.addWidget(sec3)

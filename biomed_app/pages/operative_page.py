@@ -8,6 +8,8 @@ from PyQt5 import QtCore
 from ui_helpers import CollapsibleSection
 from chart_utils import make_bar_chart
 from table_utils import make_stats_table
+from ui_helpers import add_download_button
+
 
 class OperativePage(QWidget):
     def __init__(self, main_win, df):
@@ -155,7 +157,7 @@ class OperativePage(QWidget):
             "Indication for Surgery", "", "Number of Patients"
         )
         chart1.setObjectName("chartWrapper")
-        sec1.add_widget(chart1)
+        sec1.add_widget(add_download_button(chart1, "Download Bar Chart"))
         self.vlay.addWidget(sec1)
 
         # 2) Type-specific sections
@@ -178,7 +180,8 @@ class OperativePage(QWidget):
                 counts, "Side of the Hernia", "Side", "Count"
             )
             chart2.setObjectName("chartWrapper")
-            sec_side.add_widget(chart2)
+            
+            sec_side.add_widget(add_download_button(chart2, "Download Bar Chart"))
             self.vlay.addWidget(sec_side)
 
             # Previous Repairs Right
@@ -190,7 +193,8 @@ class OperativePage(QWidget):
                 cnt_r, "Previous Repairs (Right)", "Repairs", "Count"
             )
             chart_r.setObjectName("chartWrapper")
-            sec_r.add_widget(chart_r)
+            
+            sec_r.add_widget(add_download_button(chart_r, "Download Bar Chart"))
             self.vlay.addWidget(sec_r)
 
             # Previous Repairs Left
@@ -202,7 +206,8 @@ class OperativePage(QWidget):
                 cnt_l, "Previous Repairs (Left)", "Repairs", "Count"
             )
             chart_l.setObjectName("chartWrapper")
-            sec_l.add_widget(chart_l)
+            
+            sec_l.add_widget(add_download_button(chart_l, "Download Bar Chart"))
             self.vlay.addWidget(sec_l)
 
             # Groin Hernia Type Right
@@ -217,7 +222,7 @@ class OperativePage(QWidget):
                 counts_tr, "Type (Right)", "", "Count"
             )
             chart_tr.setObjectName("chartWrapper")
-            sec_tr.add_widget(chart_tr)
+            sec_tr.add_widget(add_download_button(chart_tr, "Download Bar Chart"))
             self.vlay.addWidget(sec_tr)
 
             # Groin Hernia Type Left
@@ -232,7 +237,8 @@ class OperativePage(QWidget):
                 left_types, "Type (Left)", "", "Count"
             )
             chart_tl.setObjectName("chartWrapper")
-            sec_tl.add_widget(chart_tl)
+            
+            sec_tl.add_widget(add_download_button(chart_tl, "Download Bar Chart"))
             self.vlay.addWidget(sec_tl)
 
         elif ty == "PHR":
@@ -253,7 +259,8 @@ class OperativePage(QWidget):
                 cnt, "Previous Repairs", "", "Count"
             )
             chart_pr.setObjectName("chartWrapper")
-            sec_pr.add_widget(chart_pr)
+            
+            sec_pr.add_widget(add_download_button(chart_pr, "Download Bar Chart"))
             self.vlay.addWidget(sec_pr)
 
         elif ty == "PVHR":
@@ -263,7 +270,8 @@ class OperativePage(QWidget):
                 "PVHR Subtypes", "", "Count"
             )
             chart_pv.setObjectName("chartWrapper")  
-            sec_pv.add_widget(chart_pv)
+            
+            sec_pv.add_widget(add_download_button(chart_pv, "Download Bar Chart"))
             self.vlay.addWidget(sec_pv)
 
         elif ty == "IVHR":
@@ -275,7 +283,8 @@ class OperativePage(QWidget):
                 cnt_iv, "Previous Repairs", "", "Count"
             )
             chart_iv.setObjectName("chartWrapper")
-            sec_iv.add_widget(chart_iv)
+            
+            sec_iv.add_widget(add_download_button(chart_iv, "Download Bar Chart"))
             self.vlay.addWidget(sec_iv)
 
         # Summary Statistics

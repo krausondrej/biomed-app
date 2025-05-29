@@ -1,3 +1,4 @@
+# table_utils.py
 from PyQt5.QtWidgets import (
     QTableWidget, QTableWidgetItem, QHeaderView,
     QAbstractItemView, QSizePolicy

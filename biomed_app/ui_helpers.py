@@ -1,7 +1,7 @@
+# ui_helpers.py
 from PyQt5.QtWidgets import (
-    QWidget, QPushButton, QVBoxLayout, QSizePolicy
+    QWidget, QPushButton, QVBoxLayout, QSizePolicy, QFileDialog
 )
-from PyQt5.QtCore import Qt
 
 class CollapsibleSection(QWidget):
     def __init__(self, title: str, parent=None):
@@ -67,3 +67,26 @@ class CollapsibleSection(QWidget):
     def add_widget(self, widget: QWidget):
         """Přidá widget (graf, tabulku…) do rozbalitelné oblasti."""
         self.content_layout.addWidget(widget)
+        
+def add_download_button(canvas, label="Download graph"):
+    container = QWidget()
+    layout = QVBoxLayout()
+    container.setLayout(layout)
+
+    layout.addWidget(canvas)
+
+    btn = QPushButton(label)
+    layout.addWidget(btn)
+
+    def save_graph():
+        file_path, _ = QFileDialog.getSaveFileName(
+            None,
+            "Save Graph",
+            "",
+            "PNG Files (*.png);;All Files (*)"
+        )
+        if file_path:
+            canvas.figure.savefig(file_path)
+
+    btn.clicked.connect(save_graph)
+    return container

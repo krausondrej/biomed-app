@@ -1,7 +1,7 @@
 # pages/ops_page.py
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QPushButton,
-    QGridLayout, QHBoxLayout, QSpacerItem, QSizePolicy
+    QGridLayout, QHBoxLayout
 )
 from PyQt5 import QtCore
 

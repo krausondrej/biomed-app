@@ -101,3 +101,13 @@ def make_histogram(data, bins, title, xlabel, ylabel,
     canvas.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
     canvas.setMinimumHeight(min_h)
     return canvas
+
+def make_bmi_scatter(data, title, xlabel, ylabel):
+    fig, ax = plt.subplots()
+    ax.scatter(range(len(data)), data, color='red')
+    ax.set_title(title)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    fig.tight_layout()
+    return FigureCanvas(fig)
+

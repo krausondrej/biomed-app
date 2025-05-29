@@ -1,4 +1,3 @@
-import pandas as pd
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QScrollArea,
     QHBoxLayout, QComboBox
@@ -7,6 +6,8 @@ from PyQt5 import QtCore
 from ui_helpers import CollapsibleSection
 from chart_utils import make_bar_chart
 from table_utils import make_stats_table
+from ui_helpers import add_download_button
+
 
 class DischargePage(QWidget):
     def __init__(self, main_win, df):
@@ -147,7 +148,8 @@ class DischargePage(QWidget):
                 occ_counts,
                 'Intrahospital Complications', '', 'Count'
             )
-            sec1.add_widget(chart1)
+            sec1.add_widget(add_download_button(chart1, "Download Bar Chart"))
+            
         self.vlay.addWidget(sec1)
 
         # 2) Type of complications
@@ -185,7 +187,8 @@ class DischargePage(QWidget):
                 lbl.set_rotation(45)
                 lbl.set_ha('right')
             chart2.figure.tight_layout()
-            sec2.add_widget(chart2)
+            sec2.add_widget(add_download_button(chart2, "Download Bar Chart"))
+            
         self.vlay.addWidget(sec2)
 
         # 3) Summary statistics

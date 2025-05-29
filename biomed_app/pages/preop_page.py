@@ -6,11 +6,14 @@ from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QScrollArea,
     QComboBox, QHBoxLayout, QSizePolicy
 )
+import matplotlib.pyplot as plt
 from PyQt5 import QtCore
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from ui_helpers import CollapsibleSection
 from chart_utils import make_bar_chart, make_histogram
 from table_utils import make_stats_table
+from ui_helpers import add_download_button
+
 
 class PreopPage(QWidget):
     def __init__(self, main_win, df):
@@ -146,12 +149,13 @@ class PreopPage(QWidget):
         # přejmenuj indexy z 'male','female' → 'Male','Female'
         counts_gender.index = counts_gender.index.str.capitalize()
 
-        sec1.add_widget(make_bar_chart(
+        sec1.add_widget(add_download_button((make_bar_chart(
             counts_gender,
             "Statistics of the patients according to gender",
             "",  # xlabel
             "Number"  # ylabel
-        ))
+        )), "Download Bar Chart"))
+        
         self.vlay.addWidget(sec1)
 
 
@@ -166,12 +170,12 @@ class PreopPage(QWidget):
 
         age_counts = raw_counts.reindex(ordered, fill_value=0)
 
-        sec2.add_widget(make_bar_chart(
+        sec2.add_widget(add_download_button((make_bar_chart(
             age_counts,
             title="Age of patients",
             xlabel="",
             ylabel="Number of the patients"
-        ))
+        )), "Download Bar Chart"))
 
         self.vlay.addWidget(sec2)
         
@@ -197,14 +201,31 @@ class PreopPage(QWidget):
         end_tick   = (bmi_max // 10 + 1) * 10
         ax.set_xticks(np.arange(start_tick, end_tick + 1, 10))
         ax.set_xlim(bins[0], bins[-1])
-        
+
         for txt in list(ax.texts):
             txt.remove()
 
         fig.tight_layout()
+        sec3.add_widget(add_download_button(hist_widget, "Download histogram"))
+        
+        fig2, ax2 = plt.subplots()
+        ax2.scatter(
+            range(len(bmi)), bmi,
+            color="red",
+            s=20,
+        )
+        ax2.set_title("BMI values of individual patients")
+        ax2.set_xlabel("Patient index")
+        ax2.set_ylabel("BMI")
+        fig2.tight_layout()
 
-        sec3.add_widget(hist_widget)
+        scatter_widget = FigureCanvas(fig2)
+        sec3.add_widget(add_download_button(scatter_widget, "Download histogram"))
+
+        # Přidej celou sekci do layoutu
         self.vlay.addWidget(sec3)
+
+        
         
         # 4) Comorbidities Before Surgery
         sec4 = CollapsibleSection("Prevalence of Comorbidities")
@@ -233,6 +254,8 @@ class PreopPage(QWidget):
         fig.tight_layout()
 
         sec4.add_widget(bar_widget)
+        
+        sec4.add_widget(add_download_button(bar_widget, "Download Bar Chart"))
         self.vlay.addWidget(sec4)
 
         # 5) Pre-operative Pain Score
@@ -307,10 +330,10 @@ class PreopPage(QWidget):
         canvas = FigureCanvas(fig)
         canvas.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         canvas.setMinimumHeight(600)
-
-        sec5.add_widget(canvas)
+        sec5.add_widget(add_download_button(canvas, "Download Bar Chart"))
         self.vlay.addWidget(sec5)
 
+        # 6) Pre-operative Restrictions Score
         sec6 = CollapsibleSection("Pre-operative Restrictions Score")
 
         cols = ["Restrict_inside", "Restrict_outside", "Restrict_sports", "Restrict_heavy"]
@@ -374,8 +397,8 @@ class PreopPage(QWidget):
         canvas = FigureCanvas(fig)
         canvas.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         canvas.setMinimumHeight(600)
-
-        sec6.add_widget(canvas)
+        
+        sec6.add_widget(add_download_button(canvas, "Download Bar Chart"))
         self.vlay.addWidget(sec6)
 
         # 7) Aesthetic Discomfort Score
@@ -436,8 +459,8 @@ class PreopPage(QWidget):
         canvas = FigureCanvas(fig)
         canvas.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         canvas.setMinimumHeight(600)
-
-        sec7.add_widget(canvas)
+        
+        sec7.add_widget(add_download_button(canvas, "Download Bar Chart"))
         self.vlay.addWidget(sec7)
         
         # 8) Summary table

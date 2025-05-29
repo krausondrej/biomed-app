@@ -1,15 +1,25 @@
 # data_loader.py
 import os
 import pandas as pd
+import sys
 
-# Base directory and Excel file path
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-EXCEL_FILE = os.path.join(BASE_DIR, 'ExportedData.xlsx')
+if getattr(sys, 'frozen', False):
+    base_path = sys._MEIPASS
+else:
+    base_path = os.path.abspath(".")
+
+excel_path = os.path.join(base_path, "biomed_app", "ExportedData.xlsx")
+style_path = os.path.join(base_path, "biomed_app", "resources", "style.qss")
 
 # Load all data once from Excel
-df_all = pd.read_excel(EXCEL_FILE, parse_dates=['Date of Operation'])
-# Extract year for filtering/statistics
-df_all['Year'] = df_all['Date of Operation'].dt.year
+df_all = pd.read_excel(excel_path)
+
+# Extract year for filtering/statistics (only if column exists)
+if 'Date of Operation' in df_all.columns:
+    df_all['Date of Operation'] = pd.to_datetime(df_all['Date of Operation'], errors='coerce')
+    df_all['Year'] = df_all['Date of Operation'].dt.year
+else:
+    df_all['Year'] = None
 
 
 def load_preop_data():

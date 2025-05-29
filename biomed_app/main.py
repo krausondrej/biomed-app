@@ -2,18 +2,40 @@
 import sys
 import os
 from PyQt5.QtWidgets import QApplication
+from PyQt5.QtCore import QTimer
 from pages.main_window import MainWindow
+from splash_screen import SplashScreen
+
+if getattr(sys, 'frozen', False):
+    base_path = sys._MEIPASS
+else:
+    base_path = os.path.abspath(".")
+
+excel_path = os.path.join(base_path, "biomed_app", "ExportedData.xlsx")
+style_path = os.path.join(base_path, "biomed_app", "resources", "style.qss")
+
+def start_main_window():
+    window = MainWindow()
+    window.show()
+    splash.finish(window)
 
 def main():
     app = QApplication(sys.argv)
-    # načíst QSS relativně k main.py
+
+    # Styl QSS
     base = os.path.dirname(os.path.abspath(__file__))
-    qss  = os.path.join(base, "resources", "style.qss")
+    qss  = os.path.join(base, style_path)
     with open(qss, encoding="utf-8") as f:
         app.setStyleSheet(f.read())
 
-    window = MainWindow()
-    window.show()
+    # Zobraz splash screen
+    global splash
+    splash = SplashScreen()
+    splash.show()
+
+    # Počkej 2 sekundy a spusť hlavní okno
+    QTimer.singleShot(2000, start_main_window)
+
     sys.exit(app.exec_())
 
 if __name__ == "__main__":
