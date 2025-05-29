@@ -10,6 +10,7 @@ if getattr(sys, 'frozen', False):
 else:
     base_path = os.path.abspath(".")
 
+
 class SplashScreen(QSplashScreen):
     def __init__(self):
         # Vytvoř základní okno
@@ -28,7 +29,8 @@ class SplashScreen(QSplashScreen):
 
         # GIF animace
         self.label = QLabel()
-        gif_path = os.path.join(base_path, "biomed_app", "resources", "loading.gif")
+        gif_path = os.path.join(base_path, "biomed_app",
+                                "resources", "loading.gif")
         self.movie = QMovie(gif_path)
         self.label.setMovie(self.movie)
         self.movie.start()

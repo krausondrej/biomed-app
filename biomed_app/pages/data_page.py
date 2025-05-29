@@ -5,6 +5,7 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5 import QtCore
 
+
 class DataPage(QWidget):
     def __init__(self, main_win):
         super().__init__()
@@ -27,7 +28,7 @@ class DataPage(QWidget):
         content_layout.addWidget(title)
 
         # Podtitulek (rok + typ operace)
-        self.lbl = QLabel("")  
+        self.lbl = QLabel("")
         self.lbl.setObjectName("dataSubtitle")
         self.lbl.setAlignment(QtCore.Qt.AlignCenter)
         content_layout.addWidget(self.lbl)
@@ -47,7 +48,8 @@ class DataPage(QWidget):
             btn = QPushButton(cat)
             btn.setObjectName("dataButton")
             btn.setFixedHeight(50)
-            btn.clicked.connect(lambda _, c=cat: self.main.show_category_page(c))
+            btn.clicked.connect(
+                lambda _, c=cat: self.main.show_category_page(c))
             row, col = divmod(idx, 2)
             grid.addWidget(btn, row, col)
 
@@ -95,5 +97,5 @@ class DataPage(QWidget):
     def update_view(self):
         """Aktualizuje podtitulek podle vybraného typu operace a roku."""
         op = self.main.current_op_type or "—"
-        yr = self.main.selected_year     or "—"
+        yr = self.main.selected_year or "—"
         self.lbl.setText(f"Operation: {op}   |   Year: {yr}")

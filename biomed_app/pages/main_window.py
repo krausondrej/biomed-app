@@ -8,13 +8,14 @@ from data_loader import (
     load_oper_data, load_preop_data,
     load_discharge_data, load_followup_data
 )
-from pages.ops_page       import OpsPage
-from pages.year_page      import YearPage
-from pages.data_page      import DataPage
+from pages.ops_page import OpsPage
+from pages.year_page import YearPage
+from pages.data_page import DataPage
 from pages.operative_page import OperativePage
-from pages.preop_page     import PreopPage
+from pages.preop_page import PreopPage
 from pages.discharge_page import DischargePage
-from pages.followup_page  import FollowupPage
+from pages.followup_page import FollowupPage
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -23,26 +24,26 @@ class MainWindow(QMainWindow):
         self.resize(1000, 800)
 
         # --- load data ---
-        self.oper_df      = load_oper_data()
-        self.preop_df     = load_preop_data()
+        self.oper_df = load_oper_data()
+        self.preop_df = load_preop_data()
         self.discharge_df = load_discharge_data()
-        self.followup_df  = load_followup_data()
+        self.followup_df = load_followup_data()
 
         # --- user selections ---
         self.current_op_type = None
-        self.selected_year   = None
+        self.selected_year = None
 
         # --- navigation history stack ---
         self._history = []
 
         # --- instantiate pages ---
-        self.ops_page       = OpsPage(self)
-        self.year_page      = YearPage(self)
-        self.data_page      = DataPage(self)
-        self.oper_page      = OperativePage(self, self.oper_df)
-        self.preop_page     = PreopPage(self, self.preop_df)
+        self.ops_page = OpsPage(self)
+        self.year_page = YearPage(self)
+        self.data_page = DataPage(self)
+        self.oper_page = OperativePage(self, self.oper_df)
+        self.preop_page = PreopPage(self, self.preop_df)
         self.discharge_page = DischargePage(self, self.discharge_df)
-        self.followup_page  = FollowupPage(self, self.followup_df)
+        self.followup_page = FollowupPage(self, self.followup_df)
 
         # --- styled top navigation bar as attribute ---
         self.nav_frame = QFrame()
@@ -70,7 +71,8 @@ class MainWindow(QMainWindow):
         nav_layout.addWidget(self.btn_year)
 
         # spacer to push items left
-        nav_layout.addItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
+        nav_layout.addItem(QSpacerItem(
+            0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
 
         # --- central stacked widget ---
         self.stack = QStackedWidget()

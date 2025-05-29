@@ -6,6 +6,7 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtGui import QFont
 from PyQt5 import QtCore
 
+
 def make_stats_table(stats: dict):
     table = QTableWidget(len(stats), 2)
     table.setHorizontalHeaderLabels(["Metric", "Value"])
@@ -21,7 +22,7 @@ def make_stats_table(stats: dict):
     # Nastavení velikostní politiky tak, aby se tabulka roztahovala na šířku
     table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
 
-    # Režimy roztažení sloupců: 
+    # Režimy roztažení sloupců:
     #   Metric – podle obsahu, Value – vyplní zbývající prostor
     hdr = table.horizontalHeader()
     hdr.setSectionResizeMode(0, QHeaderView.ResizeToContents)

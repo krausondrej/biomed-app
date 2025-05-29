@@ -1,5 +1,4 @@
 # chart_utils.py
-
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -19,10 +18,11 @@ plt.rcParams.update({
     'figure.autolayout': True
 })
 
+
 def make_bar_chart(data, title, xlabel, ylabel,
-                   figsize=(8,5), dpi=100, min_h=600):
+                   figsize=(8, 5), dpi=100, min_h=600):
     fig = Figure(figsize=figsize, dpi=dpi, facecolor='white')
-    ax  = fig.add_subplot(111, facecolor='white')
+    ax = fig.add_subplot(111, facecolor='white')
 
     data.plot(kind="bar", ax=ax, color="#415A77", edgecolor="#0D1B2A")
     ax.set_title(title, color="#0D1B2A")
@@ -32,9 +32,11 @@ def make_bar_chart(data, title, xlabel, ylabel,
     # otočíme x-štítky vodorovně
     ax.tick_params(axis='x', rotation=0)
 
-    ax.spines['left'].set_color("#0D1B2A"); ax.spines['left'].set_linewidth(1.2)
+    ax.spines['left'].set_color("#0D1B2A")
+    ax.spines['left'].set_linewidth(1.2)
     ax.spines['bottom'].set_color("#0D1B2A")
-    ax.yaxis.set_ticks_position("left"); ax.xaxis.set_ticks_position("bottom")
+    ax.yaxis.set_ticks_position("left")
+    ax.xaxis.set_ticks_position("bottom")
 
     max_h = data.max() or 0
     ax.set_ylim(0, max_h * 1.4)
@@ -57,9 +59,9 @@ def make_bar_chart(data, title, xlabel, ylabel,
 
 
 def make_histogram(data, bins, title, xlabel, ylabel,
-                   figsize=(8,5), dpi=100, min_h=600):
+                   figsize=(8, 5), dpi=100, min_h=600):
     fig = Figure(figsize=figsize, dpi=dpi, facecolor='none')
-    ax  = fig.add_subplot(111, facecolor='none')
+    ax = fig.add_subplot(111, facecolor='none')
 
     # histogram
     counts, edges, patches = ax.hist(
@@ -102,6 +104,7 @@ def make_histogram(data, bins, title, xlabel, ylabel,
     canvas.setMinimumHeight(min_h)
     return canvas
 
+
 def make_bmi_scatter(data, title, xlabel, ylabel):
     fig, ax = plt.subplots()
     ax.scatter(range(len(data)), data, color='red')
@@ -110,4 +113,3 @@ def make_bmi_scatter(data, title, xlabel, ylabel):
     ax.set_ylabel(ylabel)
     fig.tight_layout()
     return FigureCanvas(fig)
-

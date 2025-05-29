@@ -1,3 +1,4 @@
+# pages/discharge_page.py
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QScrollArea,
     QHBoxLayout, QComboBox
@@ -13,7 +14,8 @@ class DischargePage(QWidget):
     def __init__(self, main_win, df):
         super().__init__()
         self.main = main_win
-        self.df   = df
+        self.df = df
+        self.selected_age_group = "All"
         self.selected_gender = "All"
         self._build_ui()
 
@@ -35,21 +37,36 @@ class DischargePage(QWidget):
         self.header.setAlignment(QtCore.Qt.AlignCenter)
         root.addWidget(self.header)
 
-        # Gender filter
-        gender_layout = QHBoxLayout()
-        gender_layout.setSpacing(10)
-        gender_layout.setAlignment(QtCore.Qt.AlignCenter)
+        # Společný layout pro oba filtry (vedle sebe)
+        filters_layout = QHBoxLayout()
+        filters_layout.setSpacing(30)  # mezera mezi filtry
+        filters_layout.setAlignment(QtCore.Qt.AlignCenter)
 
+        # --- Filtr pohlaví ---
         gender_label = QLabel("Sex:")
         gender_label.setObjectName("filterLabel")
-        gender_layout.addWidget(gender_label)
+        filters_layout.addWidget(gender_label)
 
         self.gender_combo = QComboBox()
         self.gender_combo.addItems(["All", "Male", "Female"])
         self.gender_combo.currentTextChanged.connect(self._filter_gender)
-        gender_layout.addWidget(self.gender_combo)
+        filters_layout.addWidget(self.gender_combo)
 
-        root.addLayout(gender_layout)
+        # --- Filtr věku ---
+        age_label = QLabel("Age:")
+        age_label.setObjectName("filterLabel")
+        filters_layout.addWidget(age_label)
+
+        self.age_combo = QComboBox()
+        self.age_combo.addItems([
+            "All", "<  25", "25 - 34", "35 - 44", "45 - 54",
+            "55 - 64", "65 - 74", ">  75"
+        ])
+        self.age_combo.currentTextChanged.connect(self._filter_age)
+        filters_layout.addWidget(self.age_combo)
+
+        # Přidej do root layoutu
+        root.addLayout(filters_layout)
 
         # Scroll area for collapsible sections
         scroll = QScrollArea()
@@ -100,9 +117,13 @@ class DischargePage(QWidget):
         self.selected_gender = gender_text
         self.update_view()
 
+    def _filter_age(self, age_group):
+        self.selected_age_group = age_group
+        self.update_view()
+
     def update_view(self):
         ty = self.main.current_op_type or "All types"
-        yr = self.main.selected_year   or "All years"
+        yr = self.main.selected_year or "All years"
         df = self.df.copy()
 
         # Year filtering
@@ -120,8 +141,13 @@ class DischargePage(QWidget):
         if self.selected_gender.lower() in ["male", "female"]:
             df = df[df['Gender'] == self.selected_gender.lower()]
 
+        # age filter
+        if self.selected_age_group != "All":
+            df = df[df["Age"] == self.selected_age_group]
+
         # Update header text
-        self.header.setText(f"Operation: {ty}   |   Year: {yr}   |   N = {len(df)}")
+        self.header.setText(
+            f"Operation: {ty}   |   Year: {yr}   |   N = {len(df)}")
 
         # Clear previous content
         for i in reversed(range(self.vlay.count())):
@@ -149,7 +175,7 @@ class DischargePage(QWidget):
                 'Intrahospital Complications', '', 'Count'
             )
             sec1.add_widget(add_download_button(chart1, "Download Bar Chart"))
-            
+
         self.vlay.addWidget(sec1)
 
         # 2) Type of complications
@@ -188,7 +214,7 @@ class DischargePage(QWidget):
                 lbl.set_ha('right')
             chart2.figure.tight_layout()
             sec2.add_widget(add_download_button(chart2, "Download Bar Chart"))
-            
+
         self.vlay.addWidget(sec2)
 
         # 3) Summary statistics
@@ -204,13 +230,14 @@ class DischargePage(QWidget):
         }
         # additional demographics
         gender_counts = df['Gender'].value_counts()
-        stats['Male %']   = f"{gender_counts.get('male',0)/n_total*100:.1f}%"
-        stats['Female %'] = f"{gender_counts.get('female',0)/n_total*100:.1f}%"
+        stats['Male %'] = f"{gender_counts.get('male', 0)/n_total*100:.1f}%"
+        stats['Female %'] = f"{gender_counts.get('female', 0)/n_total*100:.1f}%"
 
         sec3 = CollapsibleSection('Summary Statistics')
         wrapper = QWidget()
         wrapper_lay = QVBoxLayout(wrapper)
-        wrapper_lay.setContentsMargins(0, 10, 0, 0)   # left, top=20px, right, bottom
+        # left, top=20px, right, bottom
+        wrapper_lay.setContentsMargins(0, 10, 0, 0)
         wrapper_lay.addWidget(make_stats_table(stats))
         sec3.add_widget(wrapper)
         self.vlay.addWidget(sec3)

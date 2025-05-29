@@ -5,6 +5,7 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5 import QtCore
 
+
 class YearPage(QWidget):
     def __init__(self, main_win):
         super().__init__()

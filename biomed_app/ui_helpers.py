@@ -3,6 +3,7 @@ from PyQt5.QtWidgets import (
     QWidget, QPushButton, QVBoxLayout, QSizePolicy, QFileDialog
 )
 
+
 class CollapsibleSection(QWidget):
     def __init__(self, title: str, parent=None):
         super().__init__(parent)
@@ -25,12 +26,14 @@ class CollapsibleSection(QWidget):
                 background-color: #F5F5F5;
             }
         """)
-        self.toggle_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.toggle_button.setSizePolicy(
+            QSizePolicy.Expanding, QSizePolicy.Fixed)
 
         # obsahová oblast, původně skrytá
         self.content_area = QWidget()
         # content area zabírá výšku podle obsahu, ale při collapse se nastaví maxHeight
-        self.content_area.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.content_area.setSizePolicy(
+            QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.content_area.setVisible(False)
         self.content_area.setMaximumHeight(0)
 
@@ -67,7 +70,8 @@ class CollapsibleSection(QWidget):
     def add_widget(self, widget: QWidget):
         """Přidá widget (graf, tabulku…) do rozbalitelné oblasti."""
         self.content_layout.addWidget(widget)
-        
+
+
 def add_download_button(canvas, label="Download graph"):
     container = QWidget()
     layout = QVBoxLayout()

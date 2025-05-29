@@ -14,17 +14,19 @@ else:
 excel_path = os.path.join(base_path, "biomed_app", "ExportedData.xlsx")
 style_path = os.path.join(base_path, "biomed_app", "resources", "style.qss")
 
+
 def start_main_window():
     window = MainWindow()
     window.show()
     splash.finish(window)
+
 
 def main():
     app = QApplication(sys.argv)
 
     # Styl QSS
     base = os.path.dirname(os.path.abspath(__file__))
-    qss  = os.path.join(base, style_path)
+    qss = os.path.join(base, style_path)
     with open(qss, encoding="utf-8") as f:
         app.setStyleSheet(f.read())
 
@@ -37,6 +39,7 @@ def main():
     QTimer.singleShot(2000, start_main_window)
 
     sys.exit(app.exec_())
+
 
 if __name__ == "__main__":
     main()

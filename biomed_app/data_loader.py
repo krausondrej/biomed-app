@@ -16,7 +16,8 @@ df_all = pd.read_excel(excel_path)
 
 # Extract year for filtering/statistics (only if column exists)
 if 'Date of Operation' in df_all.columns:
-    df_all['Date of Operation'] = pd.to_datetime(df_all['Date of Operation'], errors='coerce')
+    df_all['Date of Operation'] = pd.to_datetime(
+        df_all['Date of Operation'], errors='coerce')
     df_all['Year'] = df_all['Date of Operation'].dt.year
 else:
     df_all['Year'] = None
@@ -54,31 +55,32 @@ def load_preop_data():
     df['BMI'] = pd.to_numeric(df['BMI'], errors='coerce')
 
     # Convert restriction and pain columns to numeric
-    restrict_cols = ['Restrict_inside', 'Restrict_outside', 'Restrict_sports', 'Restrict_heavy']
+    restrict_cols = ['Restrict_inside', 'Restrict_outside',
+                     'Restrict_sports', 'Restrict_heavy']
     df[restrict_cols] = (
         df[restrict_cols]
-          .apply(pd.to_numeric, errors='coerce')
-          .fillna(0)
-          .astype(int)
+        .apply(pd.to_numeric, errors='coerce')
+        .fillna(0)
+        .astype(int)
     )
     pain_cols = ['Pain_rest', 'Pain_activity', 'Pain_last_week']
     df[pain_cols] = (
         df[pain_cols]
-          .apply(pd.to_numeric, errors='coerce')
-          .fillna(0)
-          .astype(int)
+        .apply(pd.to_numeric, errors='coerce')
+        .fillna(0)
+        .astype(int)
     )
     aesth_cols = ['Esthetic_abdomen', 'Esthetic_hernia']
     df[aesth_cols] = (
         df[aesth_cols]
-          .apply(pd.to_numeric, errors='coerce')
-          .fillna(0)
-          .astype(int)
+        .apply(pd.to_numeric, errors='coerce')
+        .fillna(0)
+        .astype(int)
     )
 
     # Calculate aggregate scores
     df['Preop_Restrict_Score'] = df[restrict_cols].sum(axis=1)
-    df['Preop_Pain_Score']     = df[pain_cols].sum(axis=1)
+    df['Preop_Pain_Score'] = df[pain_cols].sum(axis=1)
     df['Esthetic_Discomfort_Score'] = df[aesth_cols].sum(axis=1)
 
     # Convert comorbidities to binary
@@ -86,6 +88,7 @@ def load_preop_data():
         df[col] = df[col].fillna(0).astype(int)
 
     return df
+
 
 def load_oper_data():
     df = df_all.copy()
@@ -110,12 +113,12 @@ def load_oper_data():
         'Please specify type of primary ventral hernia': 'PVHR_Subtype',
         'Number of previous hernia repairs': 'IVHR_Prev_Repairs',
     })
-    
+
     op_map = {
-    'Groin Hernia Repair':        'GHR',
-    'Parastomal Hernia Repair':    'PHR',
-    'Primary Ventral Hernia Repair': 'PVHR',
-    'Incisional Ventral Hernia Repair': 'IVHR'
+        'Groin Hernia Repair':        'GHR',
+        'Parastomal Hernia Repair':    'PHR',
+        'Primary Ventral Hernia Repair': 'PVHR',
+        'Incisional Ventral Hernia Repair': 'IVHR'
     }
     df['Operation_Type'] = df['Operation_Type'].map(op_map)
     return df
@@ -137,15 +140,15 @@ def load_discharge_data():
     })
     for col in ['Comp_Bleeding', 'Comp_SSI', 'Comp_Mesh_Infection', 'Comp_Hematoma', 'Comp_Prolonged_Ileus', 'Comp_Urinary_Retention', 'Comp_General']:
         df[col] = df[col].fillna(0).astype(int)
-        
+
     op_map = {
         'Groin Hernia Repair':        'GHR',
         'Parastomal Hernia Repair':    'PHR',
-        'Primary Ventral Hernia Repair':'PVHR',
-        'Incisional Ventral Hernia Repair':'IVHR'
+        'Primary Ventral Hernia Repair': 'PVHR',
+        'Incisional Ventral Hernia Repair': 'IVHR'
     }
     df['Operation_Type'] = df_all['Please choose the indication for the abdominal wall repair']\
-                               .map(op_map)
+        .map(op_map)
     return df
 
 
@@ -164,4 +167,3 @@ def load_followup_data():
     for col in ['FU_Seroma', 'FU_Hematoma', 'FU_Pain', 'FU_SSI', 'FU_Mesh_Infection', 'FU_Other']:
         df[col] = df[col].fillna(0).astype(int)
     return df
-
