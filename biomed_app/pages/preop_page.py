@@ -19,36 +19,30 @@ class PreopPage(QWidget):
     def __init__(self, main_win, df):
         super().__init__()
         self.main = main_win
-        # Originální DataFrame uchováváme pro reset filtru
         self.df_master = df.copy()
         self.selected_gender = "All"
         self.selected_age_group = "All"
         self._build_ui()
 
     def _build_ui(self):
-        # Root layout s odsazením a mezerami
         root = QVBoxLayout(self)
         root.setContentsMargins(30, 20, 30, 20)
         root.setSpacing(20)
 
-        # Titulek
         title = QLabel("PREOPERATIVE DATA")
         title.setObjectName("titleLabel")
         title.setAlignment(QtCore.Qt.AlignCenter)
         root.addWidget(title)
 
-        # Podtitulek pro typ operace a rok
         self.header = QLabel("")
         self.header.setObjectName("subtitleLabel")
         self.header.setAlignment(QtCore.Qt.AlignCenter)
         root.addWidget(self.header)
 
-        # Společný layout pro oba filtry (vedle sebe)
         filters_layout = QHBoxLayout()
-        filters_layout.setSpacing(30)  # mezera mezi filtry
+        filters_layout.setSpacing(30)
         filters_layout.setAlignment(QtCore.Qt.AlignCenter)
 
-        # --- Filtr pohlaví ---
         gender_label = QLabel("Sex:")
         gender_label.setObjectName("filterLabel")
         filters_layout.addWidget(gender_label)
@@ -58,7 +52,6 @@ class PreopPage(QWidget):
         self.gender_combo.currentTextChanged.connect(self._filter_gender)
         filters_layout.addWidget(self.gender_combo)
 
-        # --- Filtr věku ---
         age_label = QLabel("Age:")
         age_label.setObjectName("filterLabel")
         filters_layout.addWidget(age_label)
@@ -71,10 +64,8 @@ class PreopPage(QWidget):
         self.age_combo.currentTextChanged.connect(self._filter_age)
         filters_layout.addWidget(self.age_combo)
 
-        # Přidej do root layoutu
         root.addLayout(filters_layout)
 
-        # Scroll area pro sekce
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setObjectName("dataScroll")
@@ -92,7 +83,6 @@ class PreopPage(QWidget):
         root.addWidget(scroll)
         self.vlay = vlay
 
-        # Společné CSS pro stránku
         self.setStyleSheet("""
             /* Titulek */
             #titleLabel {
@@ -128,13 +118,11 @@ class PreopPage(QWidget):
         self.update_view()
 
     def update_view(self):
-        # Vyčistit staré widgety
         for i in reversed(range(self.vlay.count())):
             w = self.vlay.itemAt(i).widget()
             if w:
                 w.setParent(None)
 
-        # Základní kontrola vstupu
         if self.df_master is None or self.df_master.empty:
             lbl = QLabel("Chyba: Data nejsou dostupná.")
             lbl.setAlignment(QtCore.Qt.AlignCenter)
@@ -145,7 +133,6 @@ class PreopPage(QWidget):
         yr_sel = self.main.selected_year
         df = self.df_master.copy()
 
-        # Bezpečná filtrace podle roku
         if 'Year' in df.columns:
             if isinstance(yr_sel, str) and '-' in yr_sel:
                 try:
@@ -163,7 +150,6 @@ class PreopPage(QWidget):
             lbl.setAlignment(QtCore.Qt.AlignCenter)
             self.vlay.addWidget(lbl)
 
-        # Filtrace podle pohlaví
         if self.selected_gender.lower() in ["male", "female"]:
             if 'Gender' in df.columns:
                 df = df[df['Gender'] == self.selected_gender.lower()]
@@ -172,7 +158,6 @@ class PreopPage(QWidget):
                 lbl.setAlignment(QtCore.Qt.AlignCenter)
                 self.vlay.addWidget(lbl)
 
-        # Filtrace podle věku
         if self.selected_age_group != "All":
             if "Age" in df.columns:
                 df = df[df["Age"] == self.selected_age_group]
@@ -181,7 +166,6 @@ class PreopPage(QWidget):
                 lbl.setAlignment(QtCore.Qt.AlignCenter)
                 self.vlay.addWidget(lbl)
 
-        # Aktualizace podtitulku
         self.header.setText(
             f"Operation: {ty}   |   Year: {yr_sel}   |   N = {len(df)}"
         )
@@ -192,30 +176,26 @@ class PreopPage(QWidget):
             self.vlay.addWidget(lbl)
             return
 
-        # 1) Number of Men and Women
         sec1 = CollapsibleSection("Number of Men and Women")
         counts_gender = df["Gender"].value_counts()
 
-        # přejmenuj indexy z 'male','female' → 'Male','Female'
         counts_gender.index = counts_gender.index.str.capitalize()
 
         sec1.add_widget(add_download_button((make_bar_chart(
             counts_gender,
             "Statistics of the patients according to gender",
-            "",  # xlabel
-            "Number"  # ylabel
+            "",
+            "Number"
         )), "Download Bar Chart"))
 
         self.vlay.addWidget(sec1)
 
-        # 2) Age Distribution (categorical ranges)
         sec2 = CollapsibleSection("Age Distribution")
 
         raw_counts = df["Age"].value_counts()
 
         middle = [lbl for lbl in raw_counts.index if lbl not in (
             "<  25", ">  75")]
-        # nebo jen middle, pokud chcete zachovat původní pořadí
         middle_sorted = sorted(middle)
         ordered = ["<  25"] + middle_sorted + [">  75"]
 
@@ -230,7 +210,6 @@ class PreopPage(QWidget):
 
         self.vlay.addWidget(sec2)
 
-        # 3) BMI Distribution
         sec3 = CollapsibleSection("BMI Distribution")
 
         bmi = df["BMI"].dropna()
@@ -274,10 +253,8 @@ class PreopPage(QWidget):
         sec3.add_widget(add_download_button(
             scatter_widget, "Download histogram"))
 
-        # Přidej celou sekci do layoutu
         self.vlay.addWidget(sec3)
 
-        # 4) Comorbidities Before Surgery
         sec4 = CollapsibleSection("Prevalence of Comorbidities")
 
         com_sums = df[[
@@ -300,7 +277,6 @@ class PreopPage(QWidget):
         ax = fig.axes[0]
         for label in ax.get_xticklabels():
             label.set_rotation(45)
-            # zarovnání k pravému okraji pro lepší čitelnost
             label.set_ha("right")
 
         fig.tight_layout()
@@ -310,7 +286,6 @@ class PreopPage(QWidget):
         sec4.add_widget(add_download_button(bar_widget, "Download Bar Chart"))
         self.vlay.addWidget(sec4)
 
-        # 5) Pre-operative Pain Score
         sec5 = CollapsibleSection("Pre-operative Pain Score")
 
         rest_counts = df["Pain_rest"].value_counts().sort_index()
@@ -334,19 +309,19 @@ class PreopPage(QWidget):
         bars1 = ax.bar(
             x - width, rest.values, width,
             label="In Rest",
-            color="#E63946",  # červená
+            color="#E63946",
             edgecolor="#0D1B2A"
         )
         bars2 = ax.bar(
             x, act.values, width,
             label="During Activity",
-            color="#457B9D",  # modrá
+            color="#457B9D",
             edgecolor="#0D1B2A"
         )
         bars3 = ax.bar(
             x + width, last.values, width,
             label="Last Week",
-            color="#2A9D8F",  # zelená
+            color="#2A9D8F",
             edgecolor="#0D1B2A"
         )
 
@@ -390,7 +365,6 @@ class PreopPage(QWidget):
         sec5.add_widget(add_download_button(canvas, "Download Bar Chart"))
         self.vlay.addWidget(sec5)
 
-        # 6) Pre-operative Restrictions Score
         sec6 = CollapsibleSection("Pre-operative Restrictions Score")
 
         cols = ["Restrict_inside", "Restrict_outside",
@@ -415,7 +389,7 @@ class PreopPage(QWidget):
         for i, cnt in enumerate(counts):
             bars.append(
                 ax.bar(
-                    x + (i-1.5)*width,  # center groups
+                    x + (i-1.5)*width,
                     cnt.values,
                     width,
                     label=labels[i],
@@ -464,7 +438,6 @@ class PreopPage(QWidget):
         sec6.add_widget(add_download_button(canvas, "Download Bar Chart"))
         self.vlay.addWidget(sec6)
 
-        # 7) Aesthetic Discomfort Score
         sec7 = CollapsibleSection("Aesthetic Discomfort Score")
 
         abd_counts = df["Esthetic_abdomen"].value_counts().sort_index()
@@ -495,4 +468,62 @@ class PreopPage(QWidget):
         for barset in (bars1, bars2):
             for rect in barset:
                 h = rect.get_height()
-                ax.t
+                ax.text(
+                    rect.get_x() + rect.get_width() / 2,
+                    h + max_h * 0.02,
+                    f"{int(h)}",
+                    ha="center", va="bottom",
+                    color="#0D1B2A",
+                    fontsize=9
+                )
+
+        ax.set_title("Aesthetic Discomfort Score", color="#0D1B2A")
+        ax.set_xlabel("Discomfort Score", color="#0D1B2A", labelpad=16)
+        ax.set_ylabel("Count", color="#0D1B2A")
+        ax.set_xticks(x)
+        ax.set_xticklabels(all_scores, rotation=0)
+        ax.legend()
+
+        ax.spines['left'].set_color("#0D1B2A")
+        ax.spines['left'].set_linewidth(1.2)
+        ax.spines['bottom'].set_color("#0D1B2A")
+        ax.yaxis.set_ticks_position("left")
+        ax.xaxis.set_ticks_position("bottom")
+        ax.grid(axis="y", color="#888888", alpha=0.3)
+        ax.set_ylim(0, max_h * 1.4)
+
+        fig.tight_layout()
+
+        canvas = FigureCanvas(fig)
+        canvas.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        canvas.setMinimumHeight(600)
+
+        sec7.add_widget(add_download_button(canvas, "Download Bar Chart"))
+        self.vlay.addWidget(sec7)
+
+        df['Age_numeric'] = pd.to_numeric(df['Age'], errors='coerce')
+
+        stats = {
+            "Total patients": len(df),
+            "Males": df["Gender"].value_counts().get("male", 0),
+            "Females": df["Gender"].value_counts().get("female", 0),
+            "Male %": f"{df['Gender'].value_counts(normalize=True).get('male', 0)*100:.1f}%",
+            "Female %": f"{df['Gender'].value_counts(normalize=True).get('female', 0)*100:.1f}%",
+            "Mean BMI": f"{df['BMI'].mean():.1f}" if not df['BMI'].dropna().empty else "N/A",
+            "Median BMI": f"{df['BMI'].median():.1f}" if not df['BMI'].dropna().empty else "N/A",
+            "BMI Std Dev": f"{df['BMI'].std():.1f}" if not df['BMI'].dropna().empty else "N/A",
+            "Min BMI": f"{df['BMI'].min():.1f}" if not df['BMI'].dropna().empty else "N/A",
+            "Max BMI": f"{df['BMI'].max():.1f}" if not df['BMI'].dropna().empty else "N/A",
+            "Mean Pain (rest)": f"{df['Pain_rest'].mean():.1f}" if not df['Pain_rest'].dropna().empty else "N/A",
+            "Mean Pain (activity)": f"{df['Pain_activity'].mean():.1f}" if not df['Pain_activity'].dropna().empty else "N/A",
+            "Mean Pain (last week)": f"{df['Pain_last_week'].mean():.1f}" if not df['Pain_last_week'].dropna().empty else "N/A",
+            "Mean Comorbidities": f"{df[['Diabetes', 'COPD', 'Renal_Disease', 'Smoker']].sum(axis=1).mean():.2f}"
+        }
+
+        tbl_sec = CollapsibleSection("Basic Statistics")
+        wrapper = QWidget()
+        wrapper_lay = QVBoxLayout(wrapper)
+        wrapper_lay.setContentsMargins(0, 10, 0, 0)
+        wrapper_lay.addWidget(make_stats_table(stats))
+        tbl_sec.add_widget(wrapper)
+        self.vlay.addWidget(tbl_sec)

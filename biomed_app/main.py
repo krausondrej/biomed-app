@@ -24,18 +24,15 @@ def start_main_window():
 def main():
     app = QApplication(sys.argv)
 
-    # Styl QSS
     base = os.path.dirname(os.path.abspath(__file__))
     qss = os.path.join(base, style_path)
     with open(qss, encoding="utf-8") as f:
         app.setStyleSheet(f.read())
 
-    # Zobraz splash screen
     global splash
     splash = SplashScreen()
     splash.show()
 
-    # Počkej 2 sekundy a spusť hlavní okno
     QTimer.singleShot(2000, start_main_window)
 
     sys.exit(app.exec_())

@@ -11,31 +11,25 @@ class OpsPage(QWidget):
         super().__init__()
         self.main = main_win
 
-        # Hlavní vertikální layout, do kterého vložíme stretch, obsah a další stretch
         root_layout = QVBoxLayout(self)
         root_layout.setContentsMargins(40, 20, 40, 20)
         root_layout.setSpacing(20)
 
-        # Horní stretch pro vertikální centrování
         root_layout.addStretch()
 
-        # Content layout – sem dáme titulek, podtitul a grid
         content_layout = QVBoxLayout()
         content_layout.setSpacing(20)
 
-        # Titulek
         title = QLabel("SELECT HERNIA OPERATION TYPE")
         title.setObjectName("titleLabel")
         title.setAlignment(QtCore.Qt.AlignCenter)
         content_layout.addWidget(title)
 
-        # Podtitul
         subtitle = QLabel("Select the hernia type you want to analyze")
         subtitle.setObjectName("subtitleLabel")
         subtitle.setAlignment(QtCore.Qt.AlignCenter)
         content_layout.addWidget(subtitle)
 
-        # Grid 2×2 pro tlačítka
         grid = QGridLayout()
         grid.setHorizontalSpacing(30)
         grid.setVerticalSpacing(20)
@@ -54,20 +48,16 @@ class OpsPage(QWidget):
             row, col = divmod(idx, 2)
             grid.addWidget(btn, row, col)
 
-        # Obalíme grid do HBox se stretch pro horizontální centrování
         hbox = QHBoxLayout()
         hbox.addStretch()
         hbox.addLayout(grid)
         hbox.addStretch()
         content_layout.addLayout(hbox)
 
-        # Přidáme content_layout do root_layout
         root_layout.addLayout(content_layout)
 
-        # Dolní stretch pro vertikální centrování
         root_layout.addStretch()
 
-        # Stylování
         self.setStyleSheet("""
             #titleLabel {
                 font-size: 24px;

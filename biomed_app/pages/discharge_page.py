@@ -20,29 +20,24 @@ class DischargePage(QWidget):
         self._build_ui()
 
     def _build_ui(self):
-        # Root layout with margins and spacing
         root = QVBoxLayout(self)
         root.setContentsMargins(30, 20, 30, 20)
         root.setSpacing(15)
 
-        # Title
         title = QLabel("INTRAHOSPITAL COMPLICATIONS")
         title.setObjectName("titleLabel")
         title.setAlignment(QtCore.Qt.AlignCenter)
         root.addWidget(title)
 
-        # Subtitle / header
         self.header = QLabel("")
         self.header.setObjectName("subtitleLabel")
         self.header.setAlignment(QtCore.Qt.AlignCenter)
         root.addWidget(self.header)
 
-        # Společný layout pro oba filtry (vedle sebe)
         filters_layout = QHBoxLayout()
-        filters_layout.setSpacing(30)  # mezera mezi filtry
+        filters_layout.setSpacing(30)
         filters_layout.setAlignment(QtCore.Qt.AlignCenter)
 
-        # --- Filtr pohlaví ---
         gender_label = QLabel("Sex:")
         gender_label.setObjectName("filterLabel")
         filters_layout.addWidget(gender_label)
@@ -52,7 +47,6 @@ class DischargePage(QWidget):
         self.gender_combo.currentTextChanged.connect(self._filter_gender)
         filters_layout.addWidget(self.gender_combo)
 
-        # --- Filtr věku ---
         age_label = QLabel("Age:")
         age_label.setObjectName("filterLabel")
         filters_layout.addWidget(age_label)
@@ -65,10 +59,8 @@ class DischargePage(QWidget):
         self.age_combo.currentTextChanged.connect(self._filter_age)
         filters_layout.addWidget(self.age_combo)
 
-        # Přidej do root layoutu
         root.addLayout(filters_layout)
 
-        # Scroll area for collapsible sections
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setObjectName("dataScroll")
@@ -86,7 +78,6 @@ class DischargePage(QWidget):
         root.addWidget(scroll)
         self.vlay = vlay
 
-        # Apply stylesheet
         self.setStyleSheet("""
             /* Title */
             #titleLabel {
@@ -132,7 +123,6 @@ class DischargePage(QWidget):
         ty = self.main.current_op_type or "All types"
         yr = self.main.selected_year or "All years"
 
-        # Year filtering
         if 'Year' in df.columns:
             if isinstance(yr, str) and '-' in yr:
                 try:
@@ -151,7 +141,6 @@ class DischargePage(QWidget):
             warn_lbl.setAlignment(QtCore.Qt.AlignCenter)
             self.vlay.addWidget(warn_lbl)
 
-        # Gender filtering
         if self.selected_gender.lower() in ["male", "female"]:
             if 'Gender' in df.columns:
                 df = df[df['Gender'] == self.selected_gender.lower()]
@@ -160,7 +149,6 @@ class DischargePage(QWidget):
                 lbl.setAlignment(QtCore.Qt.AlignCenter)
                 self.vlay.addWidget(lbl)
 
-        # Age filter
         if self.selected_age_group != "All":
             if "Age" in df.columns:
                 df = df[df["Age"] == self.selected_age_group]
@@ -169,12 +157,10 @@ class DischargePage(QWidget):
                 warn_lbl.setAlignment(QtCore.Qt.AlignCenter)
                 self.vlay.addWidget(warn_lbl)
 
-        # Update header text
         self.header.setText(
             f"Operation: {ty}   |   Year: {yr}   |   N = {len(df)}"
         )
 
-        # Clear previous content
         for i in reversed(range(self.vlay.count())):
             w = self.vlay.itemAt(i).widget()
             if w:
@@ -186,7 +172,6 @@ class DischargePage(QWidget):
             self.vlay.addWidget(empty_lbl)
             return
 
-        # 1) Occurrence of complications
         if 'Intra_Complications' not in df.columns:
             err_lbl = QLabel(
                 "Chyba: Sloupec 'Intra_Complications' není dostupný.")
@@ -207,7 +192,6 @@ class DischargePage(QWidget):
             sec1.add_widget(add_download_button(chart1, "Download Bar Chart"))
         self.vlay.addWidget(sec1)
 
-        # 2) Type of complications
         cols = [
             'Comp_Bleeding', 'Comp_SSI', 'Comp_Mesh_Infection',
             'Comp_Hematoma', 'Comp_Prolonged_Ileus',
@@ -244,7 +228,7 @@ class DischargePage(QWidget):
                 counts,
                 title='Complication Types', xlabel='', ylabel='Count'
             )
-            ax = chart2.figure, chart2.figure.axes[0]
+            fg, ax = chart2.figure, chart2.figure.axes[0]
             for lbl in ax.get_xticklabels():
                 lbl.set_rotation(45)
                 lbl.set_ha('right')
@@ -252,7 +236,6 @@ class DischargePage(QWidget):
             sec2.add_widget(add_download_button(chart2, "Download Bar Chart"))
         self.vlay.addWidget(sec2)
 
-        # 3) Summary statistics
         n_total = len(df)
         has = df['Intra_Complications'].dropna().astype(bool)
         n_true = has.sum()

@@ -21,29 +21,24 @@ class OperativePage(QWidget):
         self._build_ui()
 
     def _build_ui(self):
-        # Root layout with margins and spacing
         root = QVBoxLayout(self)
         root.setContentsMargins(30, 20, 30, 20)
         root.setSpacing(15)
 
-        # Title
         title = QLabel("OPERATIVE DATA")
         title.setObjectName("titleLabel")
         title.setAlignment(QtCore.Qt.AlignCenter)
         root.addWidget(title)
 
-        # Subtitle / header
         self.header = QLabel("")
         self.header.setObjectName("subtitleLabel")
         self.header.setAlignment(QtCore.Qt.AlignCenter)
         root.addWidget(self.header)
 
-        # Společný layout pro oba filtry (vedle sebe)
         filters_layout = QHBoxLayout()
-        filters_layout.setSpacing(30)  # mezera mezi filtry
+        filters_layout.setSpacing(30)
         filters_layout.setAlignment(QtCore.Qt.AlignCenter)
 
-        # --- Filtr pohlaví ---
         gender_label = QLabel("Sex:")
         gender_label.setObjectName("filterLabel")
         filters_layout.addWidget(gender_label)
@@ -53,7 +48,6 @@ class OperativePage(QWidget):
         self.gender_combo.currentTextChanged.connect(self._filter_gender)
         filters_layout.addWidget(self.gender_combo)
 
-        # --- Filtr věku ---
         age_label = QLabel("Age:")
         age_label.setObjectName("filterLabel")
         filters_layout.addWidget(age_label)
@@ -66,10 +60,8 @@ class OperativePage(QWidget):
         self.age_combo.currentTextChanged.connect(self._filter_age)
         filters_layout.addWidget(self.age_combo)
 
-        # Přidej do root layoutu
         root.addLayout(filters_layout)
 
-        # Scroll area for collapsible sections
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setObjectName("dataScroll")
@@ -90,7 +82,6 @@ class OperativePage(QWidget):
         root.addWidget(scroll)
         self.vlay = vlay
 
-        # Apply stylesheet
         self.setStyleSheet("""
             /* Title */
             #titleLabel {
@@ -142,7 +133,6 @@ class OperativePage(QWidget):
         self.update_view()
 
     def update_view(self):
-        # Clear previous content
         for i in reversed(range(self.vlay.count())):
             w = self.vlay.itemAt(i).widget()
             if w:
@@ -158,7 +148,6 @@ class OperativePage(QWidget):
         yr_sel = self.main.selected_year
         df = self.df.copy()
 
-        # Year filtering
         if 'Year' in df.columns:
             if isinstance(yr_sel, str) and '-' in yr_sel:
                 try:
@@ -177,7 +166,6 @@ class OperativePage(QWidget):
             lbl.setAlignment(QtCore.Qt.AlignCenter)
             self.vlay.addWidget(lbl)
 
-        # Gender filtering
         if self.selected_gender.lower() in ["male", "female"]:
             if "Gender" in df.columns:
                 df = df[df["Gender"] == self.selected_gender.lower()]
@@ -186,7 +174,6 @@ class OperativePage(QWidget):
                 lbl.setAlignment(QtCore.Qt.AlignCenter)
                 self.vlay.addWidget(lbl)
 
-        # Filtrace podle věku
         if self.selected_age_group != "All":
             if "Age" in df.columns:
                 df = df[df["Age"] == self.selected_age_group]
@@ -195,7 +182,6 @@ class OperativePage(QWidget):
                 lbl.setAlignment(QtCore.Qt.AlignCenter)
                 self.vlay.addWidget(lbl)
 
-        # Header update
         self.header.setText(f"{ty}  |  {yr_sel}  |  N = {len(df)}")
 
         if df.empty:
@@ -204,7 +190,6 @@ class OperativePage(QWidget):
             self.vlay.addWidget(lbl)
             return
 
-        # 1) Indication for Surgery
         sec1 = CollapsibleSection("Indication for Surgery")
         chart1 = make_bar_chart(
             df["Indication"].value_counts(),
@@ -214,9 +199,7 @@ class OperativePage(QWidget):
         sec1.add_widget(add_download_button(chart1, "Download Bar Chart"))
         self.vlay.addWidget(sec1)
 
-        # 2) Type-specific sections
         if ty == "GHR":
-            # Side of the Hernia
             right = df["GHR_Side_Right"].fillna(0).astype(int)
             left = df["GHR_Side_Left"].fillna(0).astype(int)
 
@@ -243,7 +226,6 @@ class OperativePage(QWidget):
                 chart2, "Download Bar Chart"))
             self.vlay.addWidget(sec_side)
 
-            # Previous Repairs Right
             sec_r = CollapsibleSection("Previous Repairs (Right)")
             rep_r = df["GHR_Prev_Repairs_Right"].dropna().astype(int)
             cnt_r = rep_r.value_counts().sort_index()
@@ -257,7 +239,6 @@ class OperativePage(QWidget):
                 chart_r, "Download Bar Chart"))
             self.vlay.addWidget(sec_r)
 
-            # Previous Repairs Left
             sec_l = CollapsibleSection("Previous Repairs (Left)")
             rep_l = df["GHR_Prev_Repairs_Left"].dropna().astype(int)
             cnt_l = rep_l.value_counts().sort_index()
@@ -271,7 +252,6 @@ class OperativePage(QWidget):
                 chart_l, "Download Bar Chart"))
             self.vlay.addWidget(sec_l)
 
-            # Groin Hernia Type Right
             sec_tr = CollapsibleSection("Groin Hernia Type (Right)")
             counts_tr = df[[
                 "GHR_Type_Right_Lateral", "GHR_Type_Right_Medial",
@@ -287,7 +267,6 @@ class OperativePage(QWidget):
                 chart_tr, "Download Bar Chart"))
             self.vlay.addWidget(sec_tr)
 
-            # Groin Hernia Type Left
             sec_tl = CollapsibleSection("Groin Hernia Type (Left)")
             left_types = df[[
                 "GHR_Type_Left_Lateral", "GHR_Type_Left_Medial",
@@ -333,4 +312,61 @@ class OperativePage(QWidget):
                 df["PVHR_Subtype"].value_counts(),
                 "PVHR Subtypes", "", "Count"
             )
- 
+            chart_pv.setObjectName("chartWrapper")
+
+            sec_pv.add_widget(add_download_button(
+                chart_pv, "Download Bar Chart"))
+            self.vlay.addWidget(sec_pv)
+
+        elif ty == "IVHR":
+            sec_iv = CollapsibleSection("Previous Hernia Repairs")
+            rep_iv = df["IVHR_Prev_Repairs"].dropna().astype(int)
+            cnt_iv = rep_iv.value_counts().sort_index()
+            cnt_iv = cnt_iv[cnt_iv.index > 0]
+            chart_iv = make_bar_chart(
+                cnt_iv, "Previous Repairs", "", "Count"
+            )
+            chart_iv.setObjectName("chartWrapper")
+
+            sec_iv.add_widget(add_download_button(
+                chart_iv, "Download Bar Chart"))
+            self.vlay.addWidget(sec_iv)
+
+        stats = {
+            "Total ops": len(df),
+            "Males": df["Gender"].value_counts().get("male", 0),
+            "Females": df["Gender"].value_counts().get("female", 0)
+        }
+        total = stats["Total ops"]
+        if total:
+            stats["Male %"] = f"{stats['Males']/total*100:.1f}%"
+            stats["Female %"] = f"{stats['Females']/total*100:.1f}%"
+
+        if ty == "GHR":
+            right = df["GHR_Side_Right"].fillna(0).astype(int)
+            left = df["GHR_Side_Left"].fillna(0).astype(int)
+            bilat = ((right == 1) & (left == 1)).sum()
+            stats.update({
+                "Right %":     f"{(right == 1).sum()/total*100:.1f}%",
+                "Left %":      f"{(left == 1).sum()/total*100:.1f}%",
+                "Bilateral %": f"{bilat/total*100:.1f}%",
+                "Avg Repairs R": f"{df['GHR_Prev_Repairs_Right'].dropna().mean():.1f}",
+                "Avg Repairs L": f"{df['GHR_Prev_Repairs_Left'].dropna().mean():.1f}"
+            })
+        elif ty == "PHR":
+            stats["Avg Repairs"] = f"{df['PHR_Prev_Repairs'].dropna().mean():.1f}"
+            if not df["PHR_Stoma_Type"].dropna().empty:
+                stats["Common Stoma"] = df["PHR_Stoma_Type"].value_counts().idxmax()
+        elif ty == "PVHR":
+            if not df["PVHR_Subtype"].dropna().empty:
+                stats["Common Subtype"] = df["PVHR_Subtype"].value_counts().idxmax()
+        elif ty == "IVHR":
+            stats["Avg Repairs"] = f"{df['IVHR_Prev_Repairs'].dropna().mean():.1f}"
+
+        tbl_sec = CollapsibleSection("Summary Statistics")
+        wrapper = QWidget()
+        wrapper_lay = QVBoxLayout(wrapper)
+        wrapper_lay.setContentsMargins(0, 10, 0, 0)
+        wrapper_lay.addWidget(make_stats_table(stats))
+        tbl_sec.add_widget(wrapper)
+        self.vlay.addWidget(tbl_sec)

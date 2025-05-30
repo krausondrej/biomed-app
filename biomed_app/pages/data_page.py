@@ -11,34 +11,29 @@ class DataPage(QWidget):
         super().__init__()
         self.main = main_win
 
-        # Hlavní layout s vertikálním centrováním
         root_layout = QVBoxLayout(self)
         root_layout.setContentsMargins(40, 20, 40, 20)
         root_layout.setSpacing(20)
-        root_layout.addStretch()  # horní mezera
+        root_layout.addStretch()
 
-        # Obsahová část
         content_layout = QVBoxLayout()
         content_layout.setSpacing(15)
 
-        # Titulek
         title = QLabel("SELECT DATA CATEGORY")
         title.setObjectName("dataTitle")
         title.setAlignment(QtCore.Qt.AlignCenter)
         content_layout.addWidget(title)
 
-        # Podtitulek (rok + typ operace)
         self.lbl = QLabel("")
         self.lbl.setObjectName("dataSubtitle")
         self.lbl.setAlignment(QtCore.Qt.AlignCenter)
         content_layout.addWidget(self.lbl)
 
-        # Grid tlačítek – 2 sloupce
         categories = [
             "Preoperative data",
             "Operative data",
-            "Postoperative data (hospitalization)",
-            "Long-term postoperative data"
+            "Discharge data",
+            "Follow Up data"
         ]
         grid = QGridLayout()
         grid.setHorizontalSpacing(30)
@@ -53,18 +48,15 @@ class DataPage(QWidget):
             row, col = divmod(idx, 2)
             grid.addWidget(btn, row, col)
 
-        # Obalený grid pro horizontální centrování
         hbox = QHBoxLayout()
         hbox.addStretch()
         hbox.addLayout(grid)
         hbox.addStretch()
         content_layout.addLayout(hbox)
 
-        # Přidáme content a dolní mezera
         root_layout.addLayout(content_layout)
         root_layout.addStretch()
 
-        # Společné stylování
         self.setStyleSheet("""
             /* Title */
             #dataTitle {

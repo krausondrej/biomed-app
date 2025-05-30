@@ -234,12 +234,20 @@ class FollowupPage(QWidget):
             sec2.add_widget(empty_lbl)
         else:
             chart2 = make_bar_chart(
-                counts,
-                title="Complication Types",
-                xlabel="Type",
-                ylabel="Count"
+            counts,
+            title="Complication Types",
+            xlabel="Type",
+            ylabel="Count"
             )
+            fig = chart2.figure
+            ax = fig.axes[0]
+            for label in ax.get_xticklabels():
+                label.set_rotation(45)
+                label.set_ha('right')
+
+            fig.tight_layout()
             sec2.add_widget(add_download_button(chart2, "Download Bar Chart"))
+
         self.vlay.addWidget(sec2)
 
         # 3) Summary Statistics

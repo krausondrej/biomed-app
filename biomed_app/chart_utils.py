@@ -4,7 +4,6 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from PyQt5.QtWidgets import QSizePolicy
 
-# Globální styl přesně jako v aplikaci
 plt.style.use('seaborn-v0_8-whitegrid')
 plt.rcParams.update({
     'font.family': 'Arial',
@@ -29,7 +28,6 @@ def make_bar_chart(data, title, xlabel, ylabel,
     ax.set_xlabel(xlabel, color="#0D1B2A", labelpad=16)
     ax.set_ylabel(ylabel, color="#0D1B2A")
 
-    # otočíme x-štítky vodorovně
     ax.tick_params(axis='x', rotation=0)
 
     ax.spines['left'].set_color("#0D1B2A")
@@ -63,11 +61,10 @@ def make_histogram(data, bins, title, xlabel, ylabel,
     fig = Figure(figsize=figsize, dpi=dpi, facecolor='none')
     ax = fig.add_subplot(111, facecolor='none')
 
-    # histogram
     counts, edges, patches = ax.hist(
         data.dropna(), bins=bins,
-        color="#415A77",      # barva výplně
-        edgecolor="#0D1B2A"    # barva okraje
+        color="#415A77",
+        edgecolor="#0D1B2A"
     )
 
     ax.set_title(title)
@@ -78,15 +75,12 @@ def make_histogram(data, bins, title, xlabel, ylabel,
     ax.spines['left'].set_color('#0D1B2A')
     ax.yaxis.set_ticks_position('left')
 
-    # xticky na přesné intervaly
     ax.set_xticks(edges)
     ax.set_xticklabels([f"{int(e)}" for e in edges], rotation=45)
 
-    # zvětšení rozsahu Y o 40 %, aby se nikde nic neodřelo
     max_h = counts.max()
     ax.set_ylim(0, max_h * 1.4)
 
-    # popisky nad sloupci
     for rect, cnt in zip(patches, counts):
         ax.text(
             rect.get_x() + rect.get_width()/2,

@@ -11,29 +11,24 @@ class YearPage(QWidget):
         super().__init__()
         self.main = main_win
 
-        # Hlavní layout s vertikálním centrováním
         root_layout = QVBoxLayout(self)
         root_layout.setContentsMargins(40, 20, 40, 20)
         root_layout.setSpacing(20)
-        root_layout.addStretch()  # horní mezera
+        root_layout.addStretch()
 
-        # Content layout pro název a tlačítka
         content_layout = QVBoxLayout()
         content_layout.setSpacing(20)
 
-        # Titulek
         title = QLabel("SELECT YEAR")
         title.setObjectName("yearTitle")
         title.setAlignment(QtCore.Qt.AlignCenter)
         content_layout.addWidget(title)
 
-        # Popisek s vybraným typem
         self.lbl = QLabel("")
         self.lbl.setObjectName("yearSubtitle")
         self.lbl.setAlignment(QtCore.Qt.AlignCenter)
         content_layout.addWidget(self.lbl)
 
-        # Seznam tlačítek
         years = ["2021-2025", "2021", "2022", "2023", "2024", "2025"]
         for yr in years:
             btn = QPushButton(yr)
@@ -41,7 +36,6 @@ class YearPage(QWidget):
             btn.setFixedHeight(50)
             btn.clicked.connect(lambda _, y=yr: self.main.show_data_page(y))
 
-            # obalíme každé tlačítko do HBox, aby se vycentrovalo horizontálně
             hbox = QHBoxLayout()
             hbox.addStretch()
             hbox.addWidget(btn)
@@ -49,11 +43,9 @@ class YearPage(QWidget):
 
             content_layout.addLayout(hbox)
 
-        # vložíme obsah a dolní mezera
         root_layout.addLayout(content_layout)
-        root_layout.addStretch()  # dolní mezera
+        root_layout.addStretch()
 
-        # Styl
         self.setStyleSheet("""
             /* Titulek */
             #yearTitle {

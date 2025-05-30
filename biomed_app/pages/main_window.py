@@ -23,20 +23,16 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Biomedical Data Analyzer")
         self.resize(1000, 800)
 
-        # --- load data ---
         self.oper_df = load_oper_data()
         self.preop_df = load_preop_data()
         self.discharge_df = load_discharge_data()
         self.followup_df = load_followup_data()
 
-        # --- user selections ---
         self.current_op_type = None
         self.selected_year = None
 
-        # --- navigation history stack ---
         self._history = []
 
-        # --- instantiate pages ---
         self.ops_page = OpsPage(self)
         self.year_page = YearPage(self)
         self.data_page = DataPage(self)
@@ -45,36 +41,30 @@ class MainWindow(QMainWindow):
         self.discharge_page = DischargePage(self, self.discharge_df)
         self.followup_page = FollowupPage(self, self.followup_df)
 
-        # --- styled top navigation bar as attribute ---
         self.nav_frame = QFrame()
         self.nav_frame.setObjectName("navBar")
         nav_layout = QHBoxLayout(self.nav_frame)
         nav_layout.setContentsMargins(15, 5, 15, 5)
         nav_layout.setSpacing(20)
 
-        # Back button
         self.back_btn = QPushButton("Back")
         self.back_btn.setObjectName("navButton")
         self.back_btn.clicked.connect(self.go_back)
         nav_layout.addWidget(self.back_btn)
 
-        # Type Operation button
         self.btn_type = QPushButton("Type Operation")
         self.btn_type.setObjectName("navButton")
         self.btn_type.clicked.connect(self.show_operation_selection)
         nav_layout.addWidget(self.btn_type)
 
-        # Select Year button
         self.btn_year = QPushButton("Select Year")
         self.btn_year.setObjectName("navButton")
         self.btn_year.clicked.connect(self.show_year_selection)
         nav_layout.addWidget(self.btn_year)
 
-        # spacer to push items left
         nav_layout.addItem(QSpacerItem(
             0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
 
-        # --- central stacked widget ---
         self.stack = QStackedWidget()
         for page in [
             self.ops_page, self.year_page, self.data_page,
@@ -83,7 +73,6 @@ class MainWindow(QMainWindow):
         ]:
             self.stack.addWidget(page)
 
-        # --- main container layout ---
         container = QWidget()
         main_layout = QVBoxLayout(container)
         main_layout.setContentsMargins(0, 0, 0, 0)
@@ -92,11 +81,9 @@ class MainWindow(QMainWindow):
         main_layout.addWidget(self.stack)
         self.setCentralWidget(container)
 
-        # start on ops_page
         self.stack.setCurrentWidget(self.ops_page)
         self.update_nav_buttons()
 
-        # --- apply stylesheet for navbar and buttons ---
         self.setStyleSheet("""
             /* Navigation bar background */
             QFrame#navBar {
@@ -124,22 +111,18 @@ class MainWindow(QMainWindow):
         """Set visibility of nav_frame and nav buttons based on current page."""
         cw = self.stack.currentWidget()
 
-        # 1) On OpsPage: hide entire navbar
         if cw is self.ops_page:
             self.nav_frame.setVisible(False)
             return
 
-        # Otherwise, show navbar
         self.nav_frame.setVisible(True)
 
-        # 2) On YearPage: show Back (if history) and Type Operation only
         if cw is self.year_page:
             self.back_btn.setVisible(bool(self._history))
             self.btn_type.setVisible(True)
             self.btn_year.setVisible(False)
             return
 
-        # 3) On other pages: show Back, Type, and Year (enable Year if op type chosen)
         self.back_btn.setVisible(bool(self._history))
         self.btn_type.setVisible(True)
         self.btn_year.setVisible(True)
@@ -152,7 +135,6 @@ class MainWindow(QMainWindow):
         self.update_nav_buttons()
 
     def _navigate(self, destination):
-        # push current widget onto history then navigate
         self._history.append(self.stack.currentWidget())
         self.stack.setCurrentWidget(destination)
         self.update_nav_buttons()
@@ -184,10 +166,10 @@ class MainWindow(QMainWindow):
 
     def show_category_page(self, category):
         mapping = {
-            "Operative data":                        self.oper_page,
-            "Preoperative data":                     self.preop_page,
-            "Postoperative data (hospitalization)":  self.discharge_page,
-            "Long-term postoperative data":          self.followup_page
+            "Operative data": self.oper_page,
+            "Preoperative data": self.preop_page,
+            "Discharge data": self.discharge_page,
+            "Follow Up data": self.followup_page
         }
         target = mapping.get(category)
         if not target:
@@ -195,7 +177,6 @@ class MainWindow(QMainWindow):
         target.update_view()
         self._navigate(target)
 
-    # Direct shortcuts
     def show_oper_page(self):
         self.oper_page.update_view()
         self._navigate(self.oper_page)
