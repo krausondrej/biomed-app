@@ -17,9 +17,8 @@ plt.rcParams.update({
     'figure.autolayout': True
 })
 
-
 def make_bar_chart(data, title, xlabel, ylabel,
-                   figsize=(8, 5), dpi=100, min_h=600):
+                   figsize=(6, 4), dpi=100, min_h=100):
     fig = Figure(figsize=figsize, dpi=dpi, facecolor='white')
     ax = fig.add_subplot(111, facecolor='white')
 
@@ -49,7 +48,7 @@ def make_bar_chart(data, title, xlabel, ylabel,
 
     ax.grid(axis="y", color="#888888", alpha=0.3)
     fig.tight_layout()
-
+    
     canvas = FigureCanvas(fig)
     canvas.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
     canvas.setMinimumHeight(min_h)
@@ -57,7 +56,7 @@ def make_bar_chart(data, title, xlabel, ylabel,
 
 
 def make_histogram(data, bins, title, xlabel, ylabel,
-                   figsize=(8, 5), dpi=100, min_h=600):
+                   figsize=(6, 4), dpi=100, min_h=100):
     fig = Figure(figsize=figsize, dpi=dpi, facecolor='none')
     ax = fig.add_subplot(111, facecolor='none')
 

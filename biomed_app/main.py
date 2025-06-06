@@ -11,8 +11,8 @@ if getattr(sys, 'frozen', False):
 else:
     base_path = os.path.abspath(".")
 
-excel_path = os.path.join(base_path, "biomed_app", "ExportedData.xlsx")
-style_path = os.path.join(base_path, "biomed_app", "resources", "style.qss")
+excel_path = os.path.join(base_path, "ExportedData.xlsx")
+style_path = os.path.join(base_path, "resources", "style.qss")
 
 
 def start_main_window():

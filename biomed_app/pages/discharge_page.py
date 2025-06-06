@@ -24,7 +24,7 @@ class DischargePage(QWidget):
         root.setContentsMargins(30, 20, 30, 20)
         root.setSpacing(15)
 
-        title = QLabel("INTRAHOSPITAL COMPLICATIONS")
+        title = QLabel("DISCHARGE DATA")
         title.setObjectName("titleLabel")
         title.setAlignment(QtCore.Qt.AlignCenter)
         root.addWidget(title)
@@ -114,7 +114,7 @@ class DischargePage(QWidget):
 
     def update_view(self):
         if self.df is None or self.df.empty:
-            lbl = QLabel("Chyba: Data nejsou dostupná.")
+            lbl = QLabel("Error: data unavailable")
             lbl.setAlignment(QtCore.Qt.AlignCenter)
             self.vlay.addWidget(lbl)
             return
@@ -137,7 +137,7 @@ class DischargePage(QWidget):
                 except ValueError:
                     pass
         else:
-            warn_lbl = QLabel("Upozornění: Sloupec 'Year' není dostupný.")
+            warn_lbl = QLabel("Note: The ‘Year’ column is not available")
             warn_lbl.setAlignment(QtCore.Qt.AlignCenter)
             self.vlay.addWidget(warn_lbl)
 
@@ -145,7 +145,7 @@ class DischargePage(QWidget):
             if 'Gender' in df.columns:
                 df = df[df['Gender'] == self.selected_gender.lower()]
             else:
-                lbl = QLabel("Upozornění: Sloupec 'Gender' chybí.")
+                lbl = QLabel("Note: The ‘Gender’ column is missing")
                 lbl.setAlignment(QtCore.Qt.AlignCenter)
                 self.vlay.addWidget(lbl)
 
@@ -153,7 +153,7 @@ class DischargePage(QWidget):
             if "Age" in df.columns:
                 df = df[df["Age"] == self.selected_age_group]
             else:
-                warn_lbl = QLabel("Upozornění: Sloupec 'Age' není dostupný.")
+                warn_lbl = QLabel("Note: The ‘Age’ column is not available.")
                 warn_lbl.setAlignment(QtCore.Qt.AlignCenter)
                 self.vlay.addWidget(warn_lbl)
 
@@ -174,7 +174,7 @@ class DischargePage(QWidget):
 
         if 'Intra_Complications' not in df.columns:
             err_lbl = QLabel(
-                "Chyba: Sloupec 'Intra_Complications' není dostupný.")
+                "Error: column ‘Intra_Complications’ is not available.")
             err_lbl.setAlignment(QtCore.Qt.AlignCenter)
             self.vlay.addWidget(err_lbl)
             return
@@ -200,7 +200,7 @@ class DischargePage(QWidget):
         missing_cols = [c for c in cols if c not in df.columns]
         if missing_cols:
             err_lbl = QLabel(
-                f"Chyba: Chybí sloupce: {', '.join(missing_cols)}.")
+                f"Error: missing columns: {', '.join(missing_cols)}.")
             err_lbl.setAlignment(QtCore.Qt.AlignCenter)
             self.vlay.addWidget(err_lbl)
             return

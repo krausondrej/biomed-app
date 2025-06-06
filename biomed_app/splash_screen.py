@@ -26,13 +26,13 @@ class SplashScreen(QSplashScreen):
         layout.setAlignment(Qt.AlignCenter)
 
         self.label = QLabel()
-        gif_path = os.path.join(base_path, "biomed_app",
+        gif_path = os.path.join(base_path,
                                 "resources", "loading.gif")
         self.movie = QMovie(gif_path)
         self.label.setMovie(self.movie)
         self.movie.start()
 
-        self.text = QLabel("Načítání dat...")
+        self.text = QLabel("Loading data...")
         self.text.setAlignment(Qt.AlignCenter)
         self.text.setStyleSheet("font-size: 16px;")
 

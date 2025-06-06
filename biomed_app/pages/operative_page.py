@@ -139,7 +139,7 @@ class OperativePage(QWidget):
                 w.setParent(None)
 
         if self.df is None or self.df.empty:
-            lbl = QLabel("Chyba: Data nejsou dostupná.")
+            lbl = QLabel("Error: data unavailable")
             lbl.setAlignment(QtCore.Qt.AlignCenter)
             self.vlay.addWidget(lbl)
             return
@@ -162,7 +162,7 @@ class OperativePage(QWidget):
                 except Exception:
                     pass
         else:
-            lbl = QLabel("Upozornění: Sloupec 'Year' chybí.")
+            lbl = QLabel("Note: The 'Year' column is missing")
             lbl.setAlignment(QtCore.Qt.AlignCenter)
             self.vlay.addWidget(lbl)
 
@@ -170,7 +170,7 @@ class OperativePage(QWidget):
             if "Gender" in df.columns:
                 df = df[df["Gender"] == self.selected_gender.lower()]
             else:
-                lbl = QLabel("Upozornění: Sloupec 'Gender' chybí.")
+                lbl = QLabel("Note: The 'Gender' column is missing")
                 lbl.setAlignment(QtCore.Qt.AlignCenter)
                 self.vlay.addWidget(lbl)
 
@@ -178,26 +178,34 @@ class OperativePage(QWidget):
             if "Age" in df.columns:
                 df = df[df["Age"] == self.selected_age_group]
             else:
-                lbl = QLabel("Upozornění: Sloupec 'Age' chybí.")
+                lbl = QLabel("Note: The 'Age' column is missing")
                 lbl.setAlignment(QtCore.Qt.AlignCenter)
                 self.vlay.addWidget(lbl)
 
         self.header.setText(f"{ty}  |  {yr_sel}  |  N = {len(df)}")
 
         if df.empty:
-            lbl = QLabel("Žádná data pro zvolený filtr.")
+            lbl = QLabel("No Data")
             lbl.setAlignment(QtCore.Qt.AlignCenter)
             self.vlay.addWidget(lbl)
             return
 
         sec1 = CollapsibleSection("Indication for Surgery")
-        chart1 = make_bar_chart(
-            df["Indication"].value_counts(),
-            "Indication for Surgery", "", "Number of Patients"
-        )
-        chart1.setObjectName("chartWrapper")
-        sec1.add_widget(add_download_button(chart1, "Download Bar Chart"))
-        self.vlay.addWidget(sec1)
+        indications = df["Indication"].value_counts() if "Indication" in df.columns else pd.Series(dtype=int)
+
+        if indications.empty:
+            lbl = QLabel("No Data: Indication for Surgery")
+            lbl.setAlignment(QtCore.Qt.AlignCenter)
+            self.vlay.addWidget(lbl)
+        else:
+            chart1 = make_bar_chart(
+                indications,
+                "Indication for Surgery", "", "Number of Patients"
+            )
+            chart1.setObjectName("chartWrapper")
+            sec1.add_widget(add_download_button(chart1, "Download Bar Chart"))
+            self.vlay.addWidget(sec1)
+
 
         if ty == "GHR":
             right = df["GHR_Side_Right"].fillna(0).astype(int)
@@ -217,151 +225,207 @@ class OperativePage(QWidget):
                 ["Right", "Left", "Bilateral"], fill_value=0
             )
             sec_side = CollapsibleSection("Side of the Hernia")
-            chart2 = make_bar_chart(
-                counts, "Side of the Hernia", "Side", "Count"
-            )
-            chart2.setObjectName("chartWrapper")
+            if counts.sum() == 0:
+                lbl = QLabel("No Data: Side of the Hernia")
+                lbl.setAlignment(QtCore.Qt.AlignCenter)
+                self.vlay.addWidget(lbl)
+            else:
+                chart2 = make_bar_chart(
+                    counts, "Side of the Hernia", "Side", "Count"
+                )
+                chart2.setObjectName("chartWrapper")
+                sec_side.add_widget(add_download_button(chart2, "Download Bar Chart"))
+                self.vlay.addWidget(sec_side)
 
-            sec_side.add_widget(add_download_button(
-                chart2, "Download Bar Chart"))
-            self.vlay.addWidget(sec_side)
-
-            sec_r = CollapsibleSection("Previous Repairs (Right)")
+            sec_r = CollapsibleSection("Number of Previous Repairs (Right Side)")
             rep_r = df["GHR_Prev_Repairs_Right"].dropna().astype(int)
             cnt_r = rep_r.value_counts().sort_index()
             cnt_r = cnt_r[cnt_r.index > 0]
-            chart_r = make_bar_chart(
-                cnt_r, "Previous Repairs (Right)", "Repairs", "Count"
-            )
-            chart_r.setObjectName("chartWrapper")
+            if cnt_r.empty:
+                lbl = QLabel("No Data: Number of Previous Repairs (Right Side)")
+                lbl.setAlignment(QtCore.Qt.AlignCenter)
+                self.vlay.addWidget(lbl)
+            else:
+                chart_r = make_bar_chart(
+                    cnt_r, "Previous Repairs (Right)", "Repairs", "Count"
+                )
+                chart_r.setObjectName("chartWrapper")
+                sec_r.add_widget(add_download_button(chart_r, "Download Bar Chart"))
+                self.vlay.addWidget(sec_r)
 
-            sec_r.add_widget(add_download_button(
-                chart_r, "Download Bar Chart"))
-            self.vlay.addWidget(sec_r)
-
-            sec_l = CollapsibleSection("Previous Repairs (Left)")
+            sec_l = CollapsibleSection("Number of Previous Repairs (Left Side)")
             rep_l = df["GHR_Prev_Repairs_Left"].dropna().astype(int)
             cnt_l = rep_l.value_counts().sort_index()
             cnt_l = cnt_l[cnt_l.index > 0]
-            chart_l = make_bar_chart(
-                cnt_l, "Previous Repairs (Left)", "Repairs", "Count"
-            )
-            chart_l.setObjectName("chartWrapper")
+            if cnt_l.empty:
+                lbl = QLabel("No Data: Number of Previous Repairs (Left Side)")
+                lbl.setAlignment(QtCore.Qt.AlignCenter)
+                self.vlay.addWidget(lbl)
+            else:
+                chart_l = make_bar_chart(
+                    cnt_l, "Previous Repairs (Left)", "Repairs", "Count"
+                )
+                chart_l.setObjectName("chartWrapper")
+                sec_l.add_widget(add_download_button(
+                    chart_l, "Download Bar Chart"))
+                self.vlay.addWidget(sec_l)
 
-            sec_l.add_widget(add_download_button(
-                chart_l, "Download Bar Chart"))
-            self.vlay.addWidget(sec_l)
-
-            sec_tr = CollapsibleSection("Groin Hernia Type (Right)")
+            sec_tr = CollapsibleSection("Type of the Groin Hernia (Right)")
             counts_tr = df[[
                 "GHR_Type_Right_Lateral", "GHR_Type_Right_Medial",
                 "GHR_Type_Right_Femoral", "GHR_Type_Right_Obturator"
             ]].sum()
             counts_tr.index = ["Lateral", "Medial", "Femoral", "Obturator"]
             counts_tr = counts_tr[counts_tr > 0]
-            chart_tr = make_bar_chart(
-                counts_tr, "Type (Right)", "", "Count"
-            )
-            chart_tr.setObjectName("chartWrapper")
-            sec_tr.add_widget(add_download_button(
-                chart_tr, "Download Bar Chart"))
-            self.vlay.addWidget(sec_tr)
+            if counts_tr.empty:
+                lbl = QLabel("No Data: Type of the groin hernia (right)")
+                lbl.setAlignment(QtCore.Qt.AlignCenter)
+                self.vlay.addWidget(lbl)
+            else:
+                chart_tr = make_bar_chart(
+                    counts_tr, "Type (Right)", "", "Count"
+                )
+                chart_tr.setObjectName("chartWrapper")
+                sec_tr.add_widget(add_download_button(
+                    chart_tr, "Download Bar Chart"))
+                self.vlay.addWidget(sec_tr)
 
-            sec_tl = CollapsibleSection("Groin Hernia Type (Left)")
+            sec_tl = CollapsibleSection("Type of the Groin Hernia (Left)")
             left_types = df[[
                 "GHR_Type_Left_Lateral", "GHR_Type_Left_Medial",
                 "GHR_Type_Left_Femoral", "GHR_Type_Left_Obturator"
             ]].fillna(0).astype(int).sum()
             left_types.index = ["Lateral", "Medial", "Femoral", "Obturator"]
             left_types = left_types[left_types > 0]
-            chart_tl = make_bar_chart(
-                left_types, "Type (Left)", "", "Count"
-            )
-            chart_tl.setObjectName("chartWrapper")
+            if left_types.empty:
+                lbl = QLabel("No Data: Type of the Groin Hernia (Left)")
+                lbl.setAlignment(QtCore.Qt.AlignCenter)
+                self.vlay.addWidget(lbl)
+            else:
+                chart_tl = make_bar_chart(
+                    left_types, "Type (Left)", "", "Count"
+                )
+                chart_tl.setObjectName("chartWrapper")
 
-            sec_tl.add_widget(add_download_button(
-                chart_tl, "Download Bar Chart"))
-            self.vlay.addWidget(sec_tl)
+                sec_tl.add_widget(add_download_button(
+                    chart_tl, "Download Bar Chart"))
+                self.vlay.addWidget(sec_tl)
 
         elif ty == "PHR":
             sec_st = CollapsibleSection("Type of Stoma")
-            chart_st = make_bar_chart(
-                df["PHR_Stoma_Type"].value_counts(),
-                "Type of Stoma", "", "Count"
-            )
-            chart_st.setObjectName("chartWrapper")
-            sec_st.add_widget(chart_st)
-            self.vlay.addWidget(sec_st)
+            stoma_counts = df["PHR_Stoma_Type"].value_counts() if "PHR_Stoma_Type" in df.columns else pd.Series(dtype=int)
 
-            sec_pr = CollapsibleSection("Previous Repairs Count")
+            if stoma_counts.empty:
+                lbl = QLabel("No Data: Type of Stoma")
+                lbl.setAlignment(QtCore.Qt.AlignCenter)
+                self.vlay.addWidget(lbl)
+            else:
+                chart_st = make_bar_chart(
+                    stoma_counts,
+                    "Type of Stoma", "", "Count"
+                )
+                chart_st.setObjectName("chartWrapper")
+                sec_st.add_widget(chart_st)
+                self.vlay.addWidget(sec_st)
+
+            sec_pr = CollapsibleSection("Number of Previous Repairs")
             rep = df["PHR_Prev_Repairs"].dropna().astype(int)
             cnt = rep.value_counts().sort_index()
             cnt = cnt[cnt.index > 0]
-            chart_pr = make_bar_chart(
-                cnt, "Previous Repairs", "", "Count"
-            )
-            chart_pr.setObjectName("chartWrapper")
+            if cnt.empty:
+                lbl = QLabel("No Data: Number of Previous Repairs")
+                lbl.setAlignment(QtCore.Qt.AlignCenter)
+                self.vlay.addWidget(lbl)
+            else:
+                chart_pr = make_bar_chart(
+                    cnt, "Previous Repairs", "", "Count"
+                )
+                chart_pr.setObjectName("chartWrapper")
 
-            sec_pr.add_widget(add_download_button(
-                chart_pr, "Download Bar Chart"))
-            self.vlay.addWidget(sec_pr)
-
+                sec_pr.add_widget(add_download_button(
+                    chart_pr, "Download Bar Chart"))
+                self.vlay.addWidget(sec_pr)
+                
         elif ty == "PVHR":
-            sec_pv = CollapsibleSection("Ventral Hernia Subtypes")
-            chart_pv = make_bar_chart(
-                df["PVHR_Subtype"].value_counts(),
-                "PVHR Subtypes", "", "Count"
-            )
-            chart_pv.setObjectName("chartWrapper")
+            sec_pv = CollapsibleSection("Specification of the Type of PVHR")
+            subtypes = df["PVHR_Subtype"].value_counts()
 
-            sec_pv.add_widget(add_download_button(
-                chart_pv, "Download Bar Chart"))
-            self.vlay.addWidget(sec_pv)
+            if subtypes.empty:
+                lbl = QLabel("No Data: Specification of the Type of PVHR")
+                lbl.setAlignment(QtCore.Qt.AlignCenter)
+                self.vlay.addWidget(lbl)
+            else:
+                chart_pv = make_bar_chart(
+                    subtypes, "PVHR Subtypes", "", "Count"
+                )
+                chart_pv.setObjectName("chartWrapper")
+
+                sec_pv.add_widget(add_download_button(
+                    chart_pv, "Download Bar Chart"))
+                self.vlay.addWidget(sec_pv)
 
         elif ty == "IVHR":
-            sec_iv = CollapsibleSection("Previous Hernia Repairs")
+            sec_iv = CollapsibleSection("Number of Previous Hernia Repairs")
             rep_iv = df["IVHR_Prev_Repairs"].dropna().astype(int)
             cnt_iv = rep_iv.value_counts().sort_index()
             cnt_iv = cnt_iv[cnt_iv.index > 0]
-            chart_iv = make_bar_chart(
-                cnt_iv, "Previous Repairs", "", "Count"
-            )
-            chart_iv.setObjectName("chartWrapper")
 
-            sec_iv.add_widget(add_download_button(
-                chart_iv, "Download Bar Chart"))
-            self.vlay.addWidget(sec_iv)
+            if cnt_iv.empty:
+                lbl = QLabel("No Data: Number of Previous Hernia Repairs")
+                lbl.setAlignment(QtCore.Qt.AlignCenter)
+                self.vlay.addWidget(lbl)
+            else:
+                chart_iv = make_bar_chart(
+                    cnt_iv, "Previous Repairs", "", "Count"
+                )
+                chart_iv.setObjectName("chartWrapper")
+
+                sec_iv.add_widget(add_download_button(
+                    chart_iv, "Download Bar Chart"))
+                self.vlay.addWidget(sec_iv)
 
         stats = {
             "Total ops": len(df),
-            "Males": df["Gender"].value_counts().get("male", 0),
-            "Females": df["Gender"].value_counts().get("female", 0)
+            "Males": df["Gender"].value_counts().get("male", 0) if "Gender" in df.columns else 0,
+            "Females": df["Gender"].value_counts().get("female", 0) if "Gender" in df.columns else 0
         }
+
         total = stats["Total ops"]
         if total:
             stats["Male %"] = f"{stats['Males']/total*100:.1f}%"
             stats["Female %"] = f"{stats['Females']/total*100:.1f}%"
 
         if ty == "GHR":
-            right = df["GHR_Side_Right"].fillna(0).astype(int)
-            left = df["GHR_Side_Left"].fillna(0).astype(int)
+            right = df.get("GHR_Side_Right", pd.Series(dtype=int)).fillna(0).astype(int)
+            left = df.get("GHR_Side_Left", pd.Series(dtype=int)).fillna(0).astype(int)
             bilat = ((right == 1) & (left == 1)).sum()
             stats.update({
-                "Right %":     f"{(right == 1).sum()/total*100:.1f}%",
-                "Left %":      f"{(left == 1).sum()/total*100:.1f}%",
-                "Bilateral %": f"{bilat/total*100:.1f}%",
-                "Avg Repairs R": f"{df['GHR_Prev_Repairs_Right'].dropna().mean():.1f}",
-                "Avg Repairs L": f"{df['GHR_Prev_Repairs_Left'].dropna().mean():.1f}"
+                "Right %":     f"{(right == 1).sum()/total*100:.1f}%" if total else "0.0%",
+                "Left %":      f"{(left == 1).sum()/total*100:.1f}%" if total else "0.0%",
+                "Bilateral %": f"{bilat/total*100:.1f}%" if total else "0.0%",
+                "Avg Repairs R": f"{df['GHR_Prev_Repairs_Right'].dropna().mean():.1f}" if 'GHR_Prev_Repairs_Right' in df.columns else "N/A",
+                "Avg Repairs L": f"{df['GHR_Prev_Repairs_Left'].dropna().mean():.1f}" if 'GHR_Prev_Repairs_Left' in df.columns else "N/A"
             })
+
         elif ty == "PHR":
-            stats["Avg Repairs"] = f"{df['PHR_Prev_Repairs'].dropna().mean():.1f}"
-            if not df["PHR_Stoma_Type"].dropna().empty:
+            stats["Avg Repairs"] = (
+                f"{df['PHR_Prev_Repairs'].dropna().mean():.1f}"
+                if "PHR_Prev_Repairs" in df.columns and not df["PHR_Prev_Repairs"].dropna().empty
+                else "N/A"
+            )
+            if "PHR_Stoma_Type" in df.columns and not df["PHR_Stoma_Type"].dropna().empty:
                 stats["Common Stoma"] = df["PHR_Stoma_Type"].value_counts().idxmax()
+
         elif ty == "PVHR":
-            if not df["PVHR_Subtype"].dropna().empty:
+            if "PVHR_Subtype" in df.columns and not df["PVHR_Subtype"].dropna().empty:
                 stats["Common Subtype"] = df["PVHR_Subtype"].value_counts().idxmax()
+
         elif ty == "IVHR":
-            stats["Avg Repairs"] = f"{df['IVHR_Prev_Repairs'].dropna().mean():.1f}"
+            stats["Avg Repairs"] = (
+                f"{df['IVHR_Prev_Repairs'].dropna().mean():.1f}"
+                if "IVHR_Prev_Repairs" in df.columns and not df["IVHR_Prev_Repairs"].dropna().empty
+                else "N/A"
+            )
 
         tbl_sec = CollapsibleSection("Summary Statistics")
         wrapper = QWidget()

@@ -60,7 +60,6 @@ class CollapsibleSection(QWidget):
             self.content_area.setVisible(False)
 
     def add_widget(self, widget: QWidget):
-        """Přidá widget (graf, tabulku…) do rozbalitelné oblasti."""
         self.content_layout.addWidget(widget)
 
 

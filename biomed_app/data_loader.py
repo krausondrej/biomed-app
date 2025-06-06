@@ -8,13 +8,11 @@ if getattr(sys, 'frozen', False):
 else:
     base_path = os.path.abspath(".")
 
-excel_path = os.path.join(base_path, "biomed_app", "ExportedData.xlsx")
-style_path = os.path.join(base_path, "biomed_app", "resources", "style.qss")
+excel_path = os.path.join(base_path, "ExportedData.xlsx")
+style_path = os.path.join(base_path, "resources", "style.qss")
 
-# Load all data once from Excel
 df_all = pd.read_excel(excel_path)
 
-# Extract year for filtering/statistics (only if column exists)
 if 'Date of Operation' in df_all.columns:
     df_all['Date of Operation'] = pd.to_datetime(
         df_all['Date of Operation'], errors='coerce')
@@ -29,7 +27,6 @@ def load_preop_data():
     převede potřebné sloupce na numerické hodnoty a spočítá agregáty.
     """
     df = df_all.copy()
-    # Rename Excel columns to interní názvy
     df = df.rename(columns={
         'Gender of the patient': 'Gender',
         'Age of patient at day of operation': 'Age',
@@ -51,10 +48,8 @@ def load_preop_data():
         'Esthetical discomfort\nThe shape of your abdomen': 'Esthetic_abdomen',
         'Esthetical discomfort\nThe hernia itself': 'Esthetic_hernia',
     })
-    # Convert Age and BMI to numeric, coercing errors to NaN
     df['BMI'] = pd.to_numeric(df['BMI'], errors='coerce')
 
-    # Convert restriction and pain columns to numeric
     restrict_cols = ['Restrict_inside', 'Restrict_outside',
                      'Restrict_sports', 'Restrict_heavy']
     df[restrict_cols] = (
@@ -78,12 +73,10 @@ def load_preop_data():
         .astype(int)
     )
 
-    # Calculate aggregate scores
     df['Preop_Restrict_Score'] = df[restrict_cols].sum(axis=1)
     df['Preop_Pain_Score'] = df[pain_cols].sum(axis=1)
     df['Esthetic_Discomfort_Score'] = df[aesth_cols].sum(axis=1)
 
-    # Convert comorbidities to binary
     for col in ['No_Comorbidities', 'Diabetes', 'COPD', 'Hepatic_Disease', 'Renal_Disease', 'Aortic_Aneurysm', 'Smoker']:
         df[col] = df[col].fillna(0).astype(int)
 
